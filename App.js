@@ -4,6 +4,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import TempScreen from "./screens/temp";
 import LoginScreen from "./screens/Login";
+import MessageScreen from "./screens/MessageScreen";
 // You do need to import the screen you are working on to add it to the stack navigator
 
 const Stack = createNativeStackNavigator();
@@ -23,6 +24,10 @@ function HomeScreen({ navigation }) {
         <Button
           title="Go to Login Screen"
           onPress={() => navigation.navigate("Login")}
+        />
+        <Button
+          title="Go to Message Screen"
+          onPress={() => navigation.navigate("Message")}
         />
         {/* Copy the format of the button above to make a new button to get to the page you are working on */}
       </View>
@@ -48,6 +53,11 @@ export default function App() {
         <Stack.Screen
           name="Login"
           component={LoginScreen}
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Message"
+          component={MessageScreen}
           options={{ headerShown: false }}
         />
         {/* Copy the format of the stack.screen item above to add a new screen */}
