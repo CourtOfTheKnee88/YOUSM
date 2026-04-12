@@ -36,11 +36,29 @@ This is an Expo Go mobile application project.
 - `App.js` - Main application component
 - `app.json` - Expo configuration file
 - `assets/` - Images, fonts, and other static files
+- `server/` - Express + SQLite backend for direct messaging
 - `package.json` - Project dependencies and scripts
 
 ## Development
 
 Start editing `App.js` to build your app. The app will automatically reload when you save changes.
+
+### Messaging Backend
+
+Run the backend separately from Expo:
+
+```bash
+npm run server
+```
+
+By default the server listens on `0.0.0.0:3001`, which allows a phone on the same Wi-Fi network to reach it using your computer's LAN IP address.
+
+Available endpoints:
+
+- `GET /health`
+- `POST /threads/direct`
+- `POST /threads/:threadId/messages`
+- `GET /threads/:threadId/messages?after=...`
 
 ## Learn More
 
