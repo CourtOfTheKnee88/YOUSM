@@ -1,0 +1,194 @@
+export const users = {
+  student: {
+    id: "u1",
+    name: "Esther Greene",
+    role: "Student",
+    pronouns: "she/her",
+    bio: "Computer science student interested in software engineering, digital forensics, and building strong campus communities.",
+    university: "York College of Pennsylvania",
+    major: "Computer Science",
+    gradYear: "2027",
+    degree: "B.S. Computer Science",
+    department: "",
+    officeHours: "",
+    coursesTeaching: [],
+    employer: "",
+    jobTitle: "",
+    alumniClassYear: "",
+    moderationLevel: "",
+    managedAreas: [],
+    interests: ["Cybersecurity", "AI", "Campus Life", "Clubs"],
+    joinedCommunityIds: ["c1", "c3"],
+  },
+
+  faculty: {
+    id: "u2",
+    name: "Dr. Maya Thompson",
+    role: "Faculty",
+    pronouns: "she/her",
+    bio: "Faculty member in computer science focused on mentoring students and supporting applied software engineering projects.",
+    university: "York College of Pennsylvania",
+    major: "",
+    gradYear: "",
+    degree: "Ph.D. Computer Science",
+    department: "Computer Science",
+    officeHours: "Mon/Wed 2:00 PM - 4:00 PM",
+    coursesTeaching: [
+      "Software Engineering",
+      "Database Systems",
+      "Human-Computer Interaction",
+    ],
+    employer: "",
+    jobTitle: "",
+    alumniClassYear: "",
+    moderationLevel: "",
+    managedAreas: [],
+    interests: ["Teaching", "Research", "Student Success", "Software Design"],
+    joinedCommunityIds: ["c2", "c5"],
+  },
+
+  alumni: {
+    id: "u3",
+    name: "Avery Patel",
+    role: "Alumni",
+    pronouns: "they/them",
+    bio: "York alum working in industry and staying connected with students through mentoring and campus tech events.",
+    university: "York College of Pennsylvania",
+    major: "Computer Information Systems",
+    gradYear: "",
+    degree: "B.S. Computer Information Systems",
+    department: "",
+    officeHours: "",
+    coursesTeaching: [],
+    employer: "Civic Labs",
+    jobTitle: "UX Designer",
+    alumniClassYear: "2021",
+    moderationLevel: "",
+    managedAreas: [],
+    interests: ["Mentorship", "Design", "Career Networking", "Tech Community"],
+    joinedCommunityIds: ["c1", "c4"],
+  },
+
+  moderator: {
+    id: "u4",
+    name: "Jordan Brooks",
+    role: "Moderator",
+    pronouns: "they/them",
+    bio: "Campus moderator focused on community safety, event oversight, and keeping YOUSM spaces helpful and respectful.",
+    university: "York College of Pennsylvania",
+    major: "",
+    gradYear: "",
+    degree: "",
+    department: "Student Engagement",
+    officeHours: "Weekdays 1:00 PM - 3:00 PM",
+    coursesTeaching: [],
+    employer: "York College Student Engagement",
+    jobTitle: "Community Moderator",
+    alumniClassYear: "",
+    moderationLevel: "Senior Moderator",
+    managedAreas: [
+      "Campus Events",
+      "Student Clubs",
+      "Reported Posts",
+      "Community Requests",
+    ],
+    interests: ["Community Safety", "Events", "Student Support", "Moderation"],
+    joinedCommunityIds: ["c4", "c6"],
+  },
+};
+
+// Change to test roles:
+export const currentUser = users.student;
+// export const currentUser = users.faculty;
+// export const currentUser = users.alumni;
+// export const currentUser = users.moderator;
+
+export const communities = [
+  {
+    id: "c1",
+    name: "Women in Computing",
+    type: "Club",
+    category: "Academic",
+    description:
+      "A supportive space for students interested in technology, career growth, and collaboration.",
+    members: 84,
+  },
+  {
+    id: "c2",
+    name: "Software Engineering",
+    type: "Course",
+    category: "Class",
+    description:
+      "A course community for project collaboration, announcements, and peer support.",
+    members: 32,
+  },
+  {
+    id: "c3",
+    name: "Cybersecurity Society",
+    type: "Club",
+    category: "Academic",
+    description:
+      "For students interested in digital forensics, security, and cyber competitions.",
+    members: 56,
+  },
+  {
+    id: "c4",
+    name: "Campus Events Board",
+    type: "Organization",
+    category: "Social",
+    description:
+      "Discover campus events, volunteer opportunities, and student activities.",
+    members: 118,
+  },
+  {
+    id: "c5",
+    name: "Data Science Circle",
+    type: "Club",
+    category: "Academic",
+    description:
+      "A community for students exploring machine learning, data analysis, and research.",
+    members: 41,
+  },
+  {
+    id: "c6",
+    name: "Moderator Hub",
+    type: "Staff Group",
+    category: "Administrative",
+    description:
+      "A moderation and campus support space for handling reports, events, and community requests.",
+    members: 12,
+  },
+];
+
+export const people = [
+  {
+    id: "p1",
+    name: "Dr. Maya Thompson",
+    role: "Faculty",
+    subtitle: "Computer Science Department",
+  },
+  {
+    id: "p2",
+    name: "Jordan Lee",
+    role: "Student",
+    subtitle: "Software Engineering Major",
+  },
+  {
+    id: "p3",
+    name: "Avery Patel",
+    role: "Alumni",
+    subtitle: "UX Designer at Civic Labs",
+  },
+  {
+    id: "p4",
+    name: "Nina Brooks",
+    role: "Student",
+    subtitle: "Cybersecurity Club President",
+  },
+  {
+    id: "p5",
+    name: "Jordan Brooks",
+    role: "Moderator",
+    subtitle: "Senior Moderator",
+  },
+];
