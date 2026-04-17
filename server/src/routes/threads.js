@@ -1,7 +1,9 @@
 const express = require('express');
-const { getOrCreateDirectThread, getThreadById, insertMessage, getMessagesForThread } = require('../db');
+const { getOrCreateDirectThread, getThreadById, insertMessage, getMessagesForThread, getUserInbox } = require('../db');
 
 const router = express.Router();
+
+
 
 function pickDirectParticipants(body = {}) {
 	if (Array.isArray(body.participantIds)) {
@@ -22,6 +24,17 @@ function pickDirectParticipants(body = {}) {
 
 	return [];
 }
+
+//new inbox route
+router.get('/inbox/:userId', (req, res, next) => {
+	try {
+		const inbox = getUserInbox(req.params.userId);
+		return res.status(200).json({ inbox });
+	} catch (error) {
+		return next(error);
+	}
+});
+
 
 router.post('/direct', (req, res, next) => {
 	try {

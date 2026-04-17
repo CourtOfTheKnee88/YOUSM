@@ -44,6 +44,14 @@ function openDatabase() {
 			FOREIGN KEY (thread_id) REFERENCES threads(id) ON DELETE CASCADE
 		);
 
+		CREATE TABLE IF NOT EXISTS posts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        author_id TEXT NOT NULL,
+        content TEXT NOT NULL,
+        likes INTEGER DEFAULT 0,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
 		CREATE INDEX IF NOT EXISTS idx_thread_participants_user_id
 			ON thread_participants(user_id);
 
@@ -245,6 +253,44 @@ function pingDatabase() {
 	return db.prepare('SELECT 1 AS ok').get().ok === 1;
 }
 
+function createPost(authorId, content) {
+    const stmt = db.prepare(`
+        INSERT INTO posts (author_id, content)
+        VALUES (?, ?)
+    `);
+    const info = stmt.run(authorId, content);
+    
+    // Return the newly created post
+    return db.prepare('SELECT * FROM posts WHERE id = ?').get(info.lastInsertRowid);
+}
+
+function getRecentPosts() {
+    // Get the 50 newest posts, ordering by the timestamp
+    const stmt = db.prepare(`
+        SELECT * FROM posts 
+        ORDER BY created_at DESC 
+        LIMIT 50
+    `);
+    return stmt.all();
+}
+
+function getUserInbox(userId) {
+    // This query finds threads the user is in, grabs the OTHER participant's name, 
+    // and fetches the most recent message for the preview.
+    const stmt = db.prepare(`
+        SELECT 
+            t.id as threadId,
+            p.user_id as targetUser,
+            (SELECT content FROM messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) as lastMessage
+        FROM threads t
+        JOIN thread_participants p ON t.id = p.thread_id
+        WHERE t.id IN (SELECT thread_id FROM thread_participants WHERE user_id = ?)
+          AND p.user_id != ?
+    `);
+    return stmt.all(userId, userId);
+}
+
+
 module.exports = {
 	db,
 	dbPath,
@@ -257,5 +303,8 @@ module.exports = {
 	serializeMessage,
 	serializeThread,
 	normalizeUserIds,
+	createPost,
+    getRecentPosts,
+	getUserInbox
 };
 
