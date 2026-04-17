@@ -2,6 +2,8 @@ import TempScreen from "./screens/temp";
 import LoginScreen from "./screens/Login";
 import MessageScreen from "./screens/MessageScreen";
 import HomeScreen from "./screens/home";
+import InboxScreen from "./screens/InboxScreen"; //import inbox screen
+
 import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -11,7 +13,7 @@ const Stack = createNativeStackNavigator();
 export const NavigationStack = () => {
   return (
     <NavigationContainer>
-      <Stack.Navigator>
+      <Stack.Navigator initialRouteName="Inbox"> 
         <Stack.Screen
           name="Home"
           component={HomeScreen}
@@ -26,6 +28,11 @@ export const NavigationStack = () => {
           name="Login"
           component={LoginScreen}
           options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="Inbox"
+          component={InboxScreen}
+          options={{ headerShown: false }} 
         />
         <Stack.Screen
           name="Message"
