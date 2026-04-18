@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const http = require('http'); // Node's built-in HTTP module
 const { Server } = require('socket.io'); //Import Socket.io
+const path = require('path');
 
 const threadsRouter = require('./routes/threads');
 const messagesRouter = require('./routes/messages');
@@ -26,6 +27,9 @@ const host = process.env.HOST || '0.0.0.0';
 
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
+
+
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.get('/health', (req, res) => {
 	return res.status(200).json({
