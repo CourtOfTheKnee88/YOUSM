@@ -3,16 +3,35 @@ import PostScreen from "./screens/PostScreen";
 import InboxScreen from "./screens/InboxScreen";
 import MessageScreen from "./screens/MessageScreen";
 import LoginScreen from "./screens/Login";
-import HomeScreen from "./screens/home";
+import HomeScreen, { HeaderLogo } from "./screens/HomeScreen";
 
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { StatusBar } from "expo-status-bar";
+import { COLORS } from "./theme";
 
 const Stack = createNativeStackNavigator(); // Used for nested stacks and auth
 const Tab = createBottomTabNavigator();
+
+// Dashboard Stack
+function HomeStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: COLORS.primary },
+        headerTintColor: "#FFFFFF",
+      }}
+    >
+      <Stack.Screen
+        name="HomeMain"
+        component={HomeScreen}
+        options={{ headerTitle: () => <HeaderLogo />, headerTitleAlign: 'center' }}
+      />
+    </Stack.Navigator>
+  );
+}
 
 // Home Stack
 function FeedStack() {
@@ -68,7 +87,9 @@ export const NavigationStack = () => {
           tabBarIcon: ({ focused, color, size }) => {
             let iconName;
 
-            if (route.name === 'Feed') {
+            if (route.name === 'Home') {
+              return <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />;
+            } else if (route.name === 'Feed') {
               iconName = focused ? 'newspaper' : 'newspaper-outline';
             } else if (route.name === 'Post') {
               iconName = focused ? 'add-circle' : 'add-circle-outline';
@@ -78,10 +99,15 @@ export const NavigationStack = () => {
 
             return <Ionicons name={iconName} size={size} color={color} />;
           },
-          tabBarActiveTintColor: '#082348',
+          tabBarActiveTintColor: COLORS.primary,
           tabBarInactiveTintColor: '#999',
         })}
       >
+        <Tab.Screen
+          name="Home"
+          component={HomeStack}
+          options={{ title: 'Home' }}
+        />
         <Tab.Screen
           name="Feed"
           component={FeedStack}
