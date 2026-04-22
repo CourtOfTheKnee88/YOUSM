@@ -15,7 +15,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 
-const SERVER_URL = 'http://192.168.68.83:3001';
+const SERVER_URL = 'http://100.66.139.115:3001';
 const CURRENT_USER_ID = 1; // Hardcoded James (id: 1)
 
 export default function PostScreen({ navigation }) {
