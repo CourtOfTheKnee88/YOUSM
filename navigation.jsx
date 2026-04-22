@@ -4,7 +4,6 @@ import InboxScreen from "./screens/InboxScreen";
 import MessageScreen from "./screens/MessageScreen";
 import LoginScreen from "./screens/Login";
 import HomeScreen from "./screens/home";
-import TempScreen from "./screens/temp";
 
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";

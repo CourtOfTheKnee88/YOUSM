@@ -252,6 +252,3 @@ router.get('/:threadId/messages', (req, res, next) => {
 });
 
 module.exports = router;
-
-// VERY IMPORTANT: This exports the router so your server doesn't crash
-module.exports = router;
