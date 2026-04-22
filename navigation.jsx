@@ -1,4 +1,4 @@
-import HomeScreen from "./screens/home";
+import FeedScreen from "./screens/feed";
 import PostScreen from "./screens/PostScreen";
 
 import { NavigationContainer } from "@react-navigation/native";
@@ -10,12 +10,12 @@ const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 // Home Stack
-function HomeStack() {
+function FeedStack() {
   return (
     <Stack.Navigator>
       <Stack.Screen
-        name="HomeStack"
-        component={HomeScreen}
+        name="FeedHome"
+        component={FeedScreen}
         options={{ title: "YOUSM", headerShown: true }}
       />
     </Stack.Navigator>
@@ -27,7 +27,7 @@ function PostStack() {
   return (
     <Stack.Navigator>
       <Stack.Screen
-        name="PostStack"
+        name="CreatePost"
         component={PostScreen}
         options={{ title: "Create Post", headerShown: true }}
       />
@@ -44,8 +44,8 @@ export const NavigationStack = () => {
           tabBarIcon: ({ focused, color, size }) => {
             let iconName;
 
-            if (route.name === 'Home') {
-              iconName = focused ? 'home' : 'home-outline';
+            if (route.name === 'Feed') {
+              iconName = focused ? 'newspaper' : 'newspaper-outline';
             } else if (route.name === 'Post') {
               iconName = focused ? 'add-circle' : 'add-circle-outline';
             }
@@ -57,9 +57,9 @@ export const NavigationStack = () => {
         })}
       >
         <Tab.Screen
-          name="Home"
-          component={HomeStack}
-          options={{ title: 'Home' }}
+          name="Feed"
+          component={FeedStack}
+          options={{ title: 'Feed' }}
         />
         <Tab.Screen
           name="Post"

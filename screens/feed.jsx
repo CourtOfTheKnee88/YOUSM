@@ -16,11 +16,11 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-const SERVER_URL = 'http://192.168.68.83:3001';
+const SERVER_URL = 'http://100.66.139.115:3001';
 const CURRENT_USER_ID = 1; // Hardcoded James (id: 1)
 const CURRENT_USERNAME = 'james';
 
-export default function HomeScreen({ navigation }) {
+export default function FeedScreen({ navigation }) {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
