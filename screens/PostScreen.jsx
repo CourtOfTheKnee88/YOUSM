@@ -15,6 +15,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
 import { SERVER_URL, CURRENT_USER_ID } from '../config';
+import { COLORS, SPACING } from '../theme';
 
 
 export default function PostScreen({ navigation }) {
@@ -153,7 +154,7 @@ export default function PostScreen({ navigation }) {
               </Pressable>
             </View>
             <View style={styles.videoPreview}>
-              <Ionicons name="play-circle" size={60} color="#082348" />
+              <Ionicons name="play-circle" size={60} color={COLORS.primary} />
               <Text style={styles.videoPreviewText}>
                 {selectedVideo.uri.split('/').pop()}
               </Text>
@@ -176,7 +177,7 @@ export default function PostScreen({ navigation }) {
               <Ionicons
                 name="image"
                 size={24}
-                color={selectedImage || selectedVideo ? '#CCC' : '#082348'}
+                color={selectedImage || selectedVideo ? COLORS.textLight : COLORS.primary}
               />
               <Text
                 style={[
@@ -200,7 +201,7 @@ export default function PostScreen({ navigation }) {
               <Ionicons
                 name="videocam"
                 size={24}
-                color={selectedVideo || selectedImage ? '#CCC' : '#082348'}
+                color={selectedVideo || selectedImage ? COLORS.textLight : COLORS.primary}
               />
               <Text
                 style={[
@@ -230,10 +231,10 @@ export default function PostScreen({ navigation }) {
           }
         >
           {loading ? (
-            <ActivityIndicator color="#FFF" />
+            <ActivityIndicator color={COLORS.surface} />
           ) : (
             <>
-              <Ionicons name="send" size={20} color="#FFF" />
+              <Ionicons name="send" size={20} color={COLORS.surface} />
               <Text style={styles.postButtonText}>Post</Text>
             </>
           )}
@@ -246,7 +247,7 @@ export default function PostScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5'
+    backgroundColor: COLORS.background
   },
   scrollView: {
     flex: 1,
@@ -254,23 +255,23 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: 20,
-    backgroundColor: '#FFF',
-    borderRadius: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: SPACING.borderRadius,
     padding: 16
   },
   label: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLORS.text,
     marginBottom: 12
   },
   textInput: {
     borderWidth: 1,
-    borderColor: '#DDD',
+    borderColor: COLORS.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
-    color: '#333',
+    color: COLORS.text,
     textAlignVertical: 'top'
   },
   previewHeader: {
@@ -282,7 +283,7 @@ const styles = StyleSheet.create({
   previewTitle: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#082348'
+    color: COLORS.primary
   },
   imagePreview: {
     width: '100%',
@@ -292,7 +293,7 @@ const styles = StyleSheet.create({
   },
   videoPreview: {
     height: 250,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: COLORS.background,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center'
@@ -300,7 +301,7 @@ const styles = StyleSheet.create({
   videoPreviewText: {
     marginTop: 10,
     fontSize: 12,
-    color: '#666',
+    color: COLORS.textLight,
     textAlign: 'center',
     paddingHorizontal: 10
   },
@@ -314,9 +315,9 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#DDD',
+    borderColor: COLORS.border,
     marginHorizontal: 8,
-    backgroundColor: '#F9F9F9'
+    backgroundColor: COLORS.background
   },
   mediaButtonDisabled: {
     opacity: 0.5
@@ -325,20 +326,20 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 12,
     fontWeight: '600',
-    color: '#082348'
+    color: COLORS.primary
   },
   mediaButtonTextDisabled: {
-    color: '#CCC'
+    color: COLORS.textLight
   },
   footer: {
     padding: 16,
-    backgroundColor: '#FFF',
+    backgroundColor: COLORS.surface,
     borderTopWidth: 1,
-    borderTopColor: '#EEE'
+    borderTopColor: COLORS.border
   },
   postButton: {
     flexDirection: 'row',
-    backgroundColor: '#082348',
+    backgroundColor: COLORS.primary,
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -350,7 +351,7 @@ const styles = StyleSheet.create({
     opacity: 0.6
   },
   postButtonText: {
-    color: '#FFF',
+    color: COLORS.surface,
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8
