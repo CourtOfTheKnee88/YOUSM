@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { StyleSheet, Text, View, Pressable, FlatList, SafeAreaView, Modal, ScrollView, TextInput, Alert } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import { SERVER_URL } from '../config';
+import { COLORS, SPACING } from '../theme';
 
 const CURRENT_USER = "james"; // Changed to match the ID 1 used in other screens
 const MOCK_CONTACTS = ["James", "Courtney", "Esther", "JohnDoe"];
@@ -202,12 +203,12 @@ export default function InboxScreen({ navigation }) {
             {blockedUsers.length === 0 ? (
               <Text style={{ textAlign: 'center', color: '#999', marginBottom: 20 }}>No blocked users.</Text>
             ) : (
-              <ScrollView style={styles.contactList}>
+              <ScrollView style={styles.contactList} showsVerticalScrollIndicator={false}>
                 {blockedUsers.map((user) => (
                   <View key={user} style={styles.contactRow}>
                     <Text style={styles.contactName}>{user}</Text>
                     <Pressable onPress={() => handleUnblock(user)} style={{ padding: 5 }}>
-                      <Text style={{ color: 'red', fontWeight: 'bold' }}>Unblock</Text>
+                      <Text style={{ color: COLORS.error, fontWeight: 'bold' }}>Unblock</Text>
                     </Pressable>
                   </View>
                 ))}
@@ -236,7 +237,7 @@ export default function InboxScreen({ navigation }) {
               {MOCK_CONTACTS.map((contact) => (
                 <Pressable key={contact} style={[styles.contactRow, selectedUsers.includes(contact) && styles.contactRowSelected]} onPress={() => setSelectedUsers(prev => prev.includes(contact) ? prev.filter(u => u !== contact) : [...prev, contact])}>
                   <Text style={[styles.contactName, selectedUsers.includes(contact) && styles.contactNameSelected]}>{contact}</Text>
-                  {selectedUsers.includes(contact) && <Ionicons name="checkmark-circle" size={18} color="#082348" />}
+                  {selectedUsers.includes(contact) && <Ionicons name="checkmark-circle" size={18} color={COLORS.primary} />}
                 </Pressable>
               ))}
             </ScrollView>

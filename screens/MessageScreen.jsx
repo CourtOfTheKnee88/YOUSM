@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useVideoPlayer, VideoView } from 'expo-video'; // SDK 55 Standard
 import { SERVER_URL } from '../config';
+import { COLORS, SPACING } from '../theme';
 
 
 export default function MessageScreen({ route, navigation }) {
@@ -295,7 +296,7 @@ function VideoMessage({ source, content }) {
   return (
     <VideoView
       player={player}
-      style={{ width: 220, height: 220, borderRadius: 10, marginBottom: content ? 8 : 0, backgroundColor: '#000' }}
+      style={{ width: 220, height: 220, borderRadius: SPACING.borderRadius, marginBottom: content ? 8 : 0, backgroundColor: '#000' }}
       allowsFullscreen
       allowsPictureInPicture
     />
@@ -303,45 +304,45 @@ function VideoMessage({ source, content }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff" },
-  headerContainer: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 15, backgroundColor: "#082348" },
+  container: { flex: 1, backgroundColor: COLORS.surface },
+  headerContainer: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: 15, backgroundColor: COLORS.primary },
   iconButton: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)' },
-  headerTitle: { fontSize: 18, fontWeight: "bold", color: "white", flex: 1, textAlign: 'center', marginHorizontal: 10 },
+  headerTitle: { fontSize: 18, fontWeight: "bold", color: COLORS.surface, flex: 1, textAlign: 'center', marginHorizontal: 10 },
   chatFeed: { flex: 1, padding: 15 },
-  messageBubble: { padding: 12, borderRadius: 15, marginBottom: 10, maxWidth: "80%" },
-  myMessage: { backgroundColor: "#082348", alignSelf: "flex-end", borderBottomRightRadius: 2 },
-  theirMessage: { backgroundColor: "#F2F2F2", alignSelf: "flex-start", borderBottomLeftRadius: 2 },
+  messageBubble: { padding: 12, borderRadius: SPACING.borderRadius + 3, marginBottom: 10, maxWidth: "80%" },
+  myMessage: { backgroundColor: COLORS.primary, alignSelf: "flex-end", borderBottomRightRadius: 2 },
+  theirMessage: { backgroundColor: COLORS.background, alignSelf: "flex-start", borderBottomLeftRadius: 2 },
   senderName: { fontWeight: "bold", fontSize: 11, marginBottom: 2 },
-  mySenderName: { color: "#A0BFE0" }, 
-  theirSenderName: { color: "#999" }, 
-  myMessageText: { color: "white", fontSize: 15 }, 
-  theirMessageText: { color: "#333", fontSize: 15 },
+  mySenderName: { color: COLORS.textAccent }, 
+  theirSenderName: { color: COLORS.textLight }, 
+  myMessageText: { color: COLORS.surface, fontSize: 15 }, 
+  theirMessageText: { color: COLORS.text, fontSize: 15 },
   
   // 🛑 ADDED: Missing chatMedia Style
   chatMedia: { width: 220, height: 220, borderRadius: 10, marginBottom: 8, backgroundColor: '#ddd' },
 
-  mediaPreviewContainer: { padding: 10, backgroundColor: '#F8FAFC', flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderColor: '#EEE' },
+  mediaPreviewContainer: { padding: 10, backgroundColor: COLORS.background, flexDirection: 'row', alignItems: 'center', borderTopWidth: 1, borderColor: COLORS.border },
   mediaPreviewImage: { width: 60, height: 60, borderRadius: 8 },
   removeMediaBtn: { marginLeft: 10 },
 
-  inputContainer: { flexDirection: "row", padding: 15, borderTopWidth: 1, borderColor: "#EEE", alignItems: 'center' },
+  inputContainer: { flexDirection: "row", padding: 15, borderTopWidth: 1, borderColor: COLORS.border, alignItems: 'center' },
   attachButton: { marginRight: 10, padding: 5 },
-  textInput: { flex: 1, backgroundColor: "#F2F2F2", borderRadius: 20, paddingHorizontal: 15, height: 45 },
-  sendButton: { backgroundColor: "#082348", borderRadius: 25, width: 45, height: 45, justifyContent: "center", alignItems: 'center', marginLeft: 10 },
+  textInput: { flex: 1, backgroundColor: COLORS.background, borderRadius: 20, paddingHorizontal: 15, height: 45, color: COLORS.text },
+  sendButton: { backgroundColor: COLORS.primary, borderRadius: 25, width: 45, height: 45, justifyContent: "center", alignItems: 'center', marginLeft: 10 },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  modalContent: { width: '85%', backgroundColor: 'white', padding: 25, borderRadius: 15 },
-  modalTitle: { fontSize: 20, fontWeight: 'bold', color: '#082348', marginBottom: 20, textAlign: 'center' },
+  modalContent: { width: '85%', backgroundColor: COLORS.surface, padding: 25, borderRadius: 15 },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', color: COLORS.primary, marginBottom: 20, textAlign: 'center' },
   addUserInputRow: { flexDirection: 'row', marginBottom: 15 },
-  addUserText: { flex: 1, backgroundColor: '#F2F2F2', padding: 10, borderRadius: 8, marginRight: 10 },
-  addUserBtn: { backgroundColor: '#082348', paddingHorizontal: 15, justifyContent: 'center', borderRadius: 8 },
+  addUserText: { flex: 1, backgroundColor: COLORS.background, padding: 10, borderRadius: 8, marginRight: 10, color: COLORS.text },
+  addUserBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 15, justifyContent: 'center', borderRadius: 8 },
   addUserBtnText: { color: 'white', fontWeight: 'bold' },
   participantList: { maxHeight: 180, marginBottom: 20 },
-  participantRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderColor: '#EEE' },
+  participantRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderColor: COLORS.border },
   removeBtn: { backgroundColor: '#FFEBEB', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  removeBtnText: { color: '#D32F2F', fontWeight: 'bold', fontSize: 12 },
-  closeBtn: { backgroundColor: '#082348', padding: 12, borderRadius: 10, alignItems: 'center' },
-  closeBtnText: { color: 'white', fontWeight: 'bold', fontSize: 16 },
+  removeBtnText: { color: COLORS.error, fontWeight: 'bold', fontSize: 12 },
+  closeBtn: { backgroundColor: COLORS.primary, padding: 12, borderRadius: 10, alignItems: 'center' },
+  closeBtnText: { color: COLORS.surface, fontWeight: 'bold', fontSize: 16 },
 
   fullScreenOverlay: { flex: 1, backgroundColor: 'black', justifyContent: 'center', alignItems: 'center' },
   fullScreenImage: { width: '100%', height: '100%' },

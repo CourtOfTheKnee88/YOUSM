@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SERVER_URL, CURRENT_USER_ID } from '../config';
+import { COLORS, SPACING } from '../theme';
 
 
 export default function FeedScreen({ navigation }) {
@@ -183,7 +184,7 @@ export default function FeedScreen({ navigation }) {
               </Text>
             </View>
             <View>
-              <Text style={styles.authorName}>{item.displayName}</Text>
+              <Text style={styles.authorName}>{item.displayName || "Unknown"}</Text>
               <Text style={styles.postTime}>
                 {new Date(item.createdAt).toLocaleDateString()}
               </Text>
@@ -191,7 +192,7 @@ export default function FeedScreen({ navigation }) {
           </View>
           {item.authorId === CURRENT_USER_ID && (
             <Pressable>
-              <Ionicons name="ellipsis-vertical" size={24} color="#082348" />
+              <Ionicons name="ellipsis-vertical" size={24} color={COLORS.primary} />
             </Pressable>
           )}
         </View>
@@ -212,7 +213,7 @@ export default function FeedScreen({ navigation }) {
         {/* Post Video Placeholder */}
         {item.videoUrl && (
           <View style={styles.videoPlaceholder}>
-            <Ionicons name="play-circle" size={60} color="#082348" />
+            <Ionicons name="play-circle" size={60} color={COLORS.primary} />
             <Text style={styles.videoText}>Video Post</Text>
           </View>
         )}
@@ -233,7 +234,7 @@ export default function FeedScreen({ navigation }) {
             <Ionicons
               name={isLiked ? 'heart' : 'heart-outline'}
               size={24}
-              color={isLiked ? '#E74C3C' : '#666'}
+              color={isLiked ? COLORS.error : COLORS.textLight}
             />
             <Text style={[styles.actionText, isLiked && styles.actionTextActive]}>
               Like
@@ -241,12 +242,12 @@ export default function FeedScreen({ navigation }) {
           </Pressable>
 
           <Pressable style={styles.actionButton} onPress={() => handleComment(item.id)}>
-            <Ionicons name="chatbubble-outline" size={24} color="#666" />
+            <Ionicons name="chatbubble-outline" size={24} color={COLORS.textLight} />
             <Text style={styles.actionText}>Comment</Text>
           </Pressable>
 
           <Pressable style={styles.actionButton} onPress={() => handleShare(item)}>
-            <Ionicons name="share-social-outline" size={24} color="#666" />
+            <Ionicons name="share-social-outline" size={24} color={COLORS.textLight} />
             <Text style={styles.actionText}>Share</Text>
           </Pressable>
         </View>
@@ -257,7 +258,7 @@ export default function FeedScreen({ navigation }) {
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <ActivityIndicator size="large" color="#082348" />
+        <ActivityIndicator size="large" color={COLORS.primary} />
       </SafeAreaView>
     );
   }
@@ -299,14 +300,14 @@ export default function FeedScreen({ navigation }) {
             </View>
 
             {loadingComments ? (
-              <ActivityIndicator size="small" color="#082348" style={{ marginVertical: 20 }} />
+              <ActivityIndicator size="small" color={COLORS.primary} style={{ marginVertical: 20 }} />
             ) : (
               <FlatList
                 data={comments}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
                   <View style={styles.commentItem}>
-                    <Text style={styles.commentAuthor}>{item.displayName}</Text>
+                    <Text style={styles.commentAuthor}>{item.displayName || "User"}</Text>
                     <Text style={styles.commentText}>{item.content}</Text>
                   </View>
                 )}
@@ -340,17 +341,17 @@ export default function FeedScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F5F5'
+    backgroundColor: COLORS.background
   },
   listContent: {
     paddingBottom: 20
   },
   postContainer: {
-    backgroundColor: '#FFF',
+    backgroundColor: COLORS.surface,
     marginBottom: 10,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: '#EEE'
+    borderColor: COLORS.border
   },
   postHeader: {
     flexDirection: 'row',
@@ -358,7 +359,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0'
+    borderBottomColor: COLORS.border
   },
   authorInfo: {
     flexDirection: 'row',
@@ -369,29 +370,29 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#082348',
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10
   },
   avatarText: {
-    color: '#FFF',
+    color: COLORS.surface,
     fontWeight: 'bold',
     fontSize: 16
   },
   authorName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333'
+    color: COLORS.text
   },
   postTime: {
     fontSize: 12,
-    color: '#999',
+    color: COLORS.textLight,
     marginTop: 2
   },
   postContent: {
     fontSize: 16,
-    color: '#333',
+    color: COLORS.text,
     padding: 12,
     lineHeight: 24
   },
@@ -402,14 +403,14 @@ const styles = StyleSheet.create({
   },
   videoPlaceholder: {
     height: 300,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: COLORS.background,
     alignItems: 'center',
     justifyContent: 'center'
   },
   videoText: {
     marginTop: 10,
     fontSize: 14,
-    color: '#082348',
+    color: COLORS.primary,
     fontWeight: '500'
   },
   postStats: {
@@ -417,13 +418,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
+    borderTopColor: COLORS.border,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0'
+    borderBottomColor: COLORS.border
   },
   statText: {
     fontSize: 12,
-    color: '#666',
+    color: COLORS.textLight,
     marginRight: 15
   },
   postActions: {
@@ -445,11 +446,11 @@ const styles = StyleSheet.create({
   actionText: {
     marginLeft: 6,
     fontSize: 14,
-    color: '#666',
+    color: COLORS.textLight,
     fontWeight: '500'
   },
   actionTextActive: {
-    color: '#E74C3C'
+    color: COLORS.error
   },
   emptyContainer: {
     flex: 1,
@@ -460,12 +461,12 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: COLORS.text,
     marginTop: 10
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#999',
+    color: COLORS.textLight,
     marginTop: 5,
     textAlign: 'center',
     paddingHorizontal: 20
@@ -476,7 +477,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end'
   },
   modalContent: {
-    backgroundColor: '#FFF',
+    backgroundColor: COLORS.surface,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
@@ -491,7 +492,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333'
+    color: COLORS.text
   },
   commentsList: {
     flex: 1,
@@ -501,21 +502,21 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0'
+    borderBottomColor: COLORS.border
   },
   commentAuthor: {
     fontWeight: 'bold',
     fontSize: 14,
-    color: '#333',
+    color: COLORS.text,
     marginBottom: 2
   },
   commentText: {
     fontSize: 14,
-    color: '#666'
+    color: COLORS.textLight
   },
   emptyComments: {
     textAlign: 'center',
-    color: '#999',
+    color: COLORS.textLight,
     marginTop: 20
   },
   inputContainer: {
@@ -523,7 +524,7 @@ const styles = StyleSheet.create({
   },
   modalInput: {
     borderWidth: 1,
-    borderColor: '#DDD',
+    borderColor: COLORS.border,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
@@ -531,7 +532,7 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   submitButton: {
-    backgroundColor: '#082348',
+    backgroundColor: COLORS.primary,
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center'
