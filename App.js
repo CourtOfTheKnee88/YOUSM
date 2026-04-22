@@ -1,3 +1,4 @@
+import React from "react";
 import { DatabaseProvider } from "./database";
 import { NavigationStack } from "./navigation";
 
