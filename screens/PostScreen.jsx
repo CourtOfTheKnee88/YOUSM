@@ -14,9 +14,8 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
+import { SERVER_URL, CURRENT_USER_ID } from '../config';
 
-const SERVER_URL = 'http://100.66.139.115:3001';
-const CURRENT_USER_ID = 1; // Hardcoded James (id: 1)
 
 export default function PostScreen({ navigation }) {
   const [content, setContent] = useState('');
@@ -50,28 +49,6 @@ export default function PostScreen({ navigation }) {
     }
   };
 
-  const uploadFile = async (file, type) => {
-    try {
-      const formData = new FormData();
-      const filename = file.uri.split('/').pop();
-      const match = /\.(\w+)$/.exec(filename);
-      const ext = match ? match[1] : 'jpg';
-
-      formData.append('file', {
-        uri: file.uri,
-        name: filename,
-        type: type === 'image' ? `image/${ext}` : `video/${ext}`
-      });
-
-      // For now, return a placeholder URL
-      // In production, you'd upload to a service like AWS S3
-      return file.uri;
-    } catch (error) {
-      console.error('Upload error:', error);
-      return null;
-    }
-  };
-
   const createPost = async () => {
     if (!content.trim() && !selectedImage && !selectedVideo) {
       Alert.alert('Error', 'Please add content, an image, or a video');
@@ -81,30 +58,33 @@ export default function PostScreen({ navigation }) {
     setLoading(true);
 
     try {
-      let imageUrl = null;
-      let videoUrl = null;
+      const formData = new FormData();
+      formData.append('authorId', CURRENT_USER_ID.toString());
+      if (content.trim()) formData.append('content', content.trim());
 
-      if (selectedImage) {
-        imageUrl = await uploadFile(selectedImage, 'image');
-      }
+      const selectedMedia = selectedImage || selectedVideo;
+      if (selectedMedia) {
+        const localUri = selectedMedia.uri;
+        const filename = localUri.split('/').pop();
+        const match = /\.(\w+)$/.exec(filename);
+        const type = selectedImage ? 'image' : 'video';
+        const ext = match ? match[1] : (type === 'image' ? 'jpg' : 'mp4');
 
-      if (selectedVideo) {
-        videoUrl = await uploadFile(selectedVideo, 'video');
+        formData.append('media', {
+          uri: localUri,
+          name: filename,
+          type: `${type}/${ext}`
+        });
       }
 
       const res = await fetch(`${SERVER_URL}/posts`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          authorId: CURRENT_USER_ID,
-          content: content.trim() || null,
-          imageUrl,
-          videoUrl
-        })
+        body: formData,
       });
 
       if (!res.ok) {
-        throw new Error('Failed to create post');
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to create post');
       }
 
       // Clear form

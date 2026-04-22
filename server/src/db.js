@@ -152,6 +152,19 @@ function normalizeUserIds(input) {
   return unique.sort();
 }
 
+function serializeMessage(message) {
+  if (!message) return null;
+  return {
+    id: message.id,
+    threadId: message.thread_id,
+    senderId: message.sender_id,
+    content: message.content,
+    mediaUrl: message.media_url,
+    mediaType: message.media_type,
+    createdAt: message.created_at,
+  };
+}
+
 function serializeThread(thread) {
   if (!thread) return null;
   const participants = db.prepare(`SELECT user_id FROM thread_participants WHERE thread_id = ? ORDER BY user_id ASC`).all(thread.id).map((row) => row.user_id);
@@ -180,11 +193,205 @@ function getOrCreateDirectThread(userIds) {
   return serializeThread(db.prepare(`SELECT * FROM threads WHERE id = ?`).get(transaction()));
 }
 
+function getAllUsers() {
+  return db.prepare(`
+    SELECT id, username, displayName, bio, profileImage,
+      (SELECT COUNT(*) FROM followers WHERE followingId = users.id) as followerCount,
+      (SELECT COUNT(*) FROM followers WHERE followerId = users.id) as followingCount
+    FROM users
+    ORDER BY displayName
+  `).all();
+}
+
+function getUserById(userId) {
+  return db.prepare(`
+    SELECT id, username, displayName, bio, profileImage, createdAt,
+      (SELECT COUNT(*) FROM followers WHERE followingId = ?) as followerCount,
+      (SELECT COUNT(*) FROM followers WHERE followerId = ?) as followingCount
+    FROM users
+    WHERE id = ?
+  `).get(userId, userId, userId);
+}
+
+function getUserByUsername(username) {
+  return db.prepare(`
+    SELECT id, username, displayName, bio, profileImage, createdAt,
+      (SELECT COUNT(*) FROM followers WHERE followingId = users.id) as followerCount,
+      (SELECT COUNT(*) FROM followers WHERE followerId = users.id) as followingCount
+    FROM users
+    WHERE username = ?
+  `).get(username);
+}
+
+function toggleFollow(followerId, followingId) {
+  const existing = db.prepare(`
+    SELECT id FROM followers WHERE followerId = ? AND followingId = ?
+  `).get(followerId, followingId);
+
+  if (existing) {
+    db.prepare(`DELETE FROM followers WHERE id = ?`).run(existing.id);
+    return { following: false };
+  } else {
+    db.prepare(`INSERT INTO followers (followerId, followingId) VALUES (?, ?)`).run(followerId, followingId);
+    return { following: true };
+  }
+}
+
+function getFollowers(userId) {
+  return db.prepare(`
+    SELECT u.id, u.username, u.displayName, u.profileImage
+    FROM followers f
+    JOIN users u ON f.followerId = u.id
+    WHERE f.followingId = ? ORDER BY f.createdAt DESC
+  `).all(userId);
+}
+
+function getFollowing(userId) {
+  return db.prepare(`
+    SELECT u.id, u.username, u.displayName, u.profileImage
+    FROM followers f
+    JOIN users u ON f.followingId = u.id
+    WHERE f.followerId = ? ORDER BY f.createdAt DESC
+  `).all(userId);
+}
+
+function getThreadById(threadId) {
+  const thread = db.prepare(`SELECT * FROM threads WHERE id = ?`).get(threadId);
+  return serializeThread(thread);
+}
+
+function createGroupThread(userIds, groupName = null) {
+  const uniqueUsers = [...new Set(userIds.map(id => String(id).trim()).filter(Boolean))];
+  if (uniqueUsers.length < 2) throw new Error('Group thread needs at least 2 participants.');
+
+  const transaction = db.transaction(() => {
+    const result = db.prepare(`INSERT INTO threads (thread_type, name) VALUES ('group', ?)`).run(groupName);
+    const threadId = result.lastInsertRowid;
+    for (const userId of uniqueUsers) {
+      db.prepare(`INSERT INTO thread_participants (thread_id, user_id) VALUES (?, ?)`).run(threadId, userId);
+    }
+    return threadId;
+  });
+  return getThreadById(transaction());
+}
+
 function insertMessage(threadId, senderId, content, mediaUrl = null, mediaType = null) {
   const trimmedContent = String(content ?? '').trim();
   if (!trimmedContent && !mediaUrl) throw new Error('Message must contain text or media.');
+  
+  if (isBlockedByAny(senderId, threadId)) {
+    throw new Error('Message blocked: You cannot exchange messages with this user.');
+  }
+
   const result = db.prepare(`INSERT INTO messages (thread_id, sender_id, content, media_url, media_type) VALUES (?, ?, ?, ?, ?)`).run(threadId, String(senderId).trim(), trimmedContent || null, mediaUrl, mediaType);
-  return db.prepare(`SELECT * FROM messages WHERE id = ?`).get(result.lastInsertRowid);
+  return serializeMessage(db.prepare(`SELECT * FROM messages WHERE id = ?`).get(result.lastInsertRowid));
+}
+
+function interactWithPost(postId, userId, type, content = null) {
+  if (type === 'like') {
+    const existing = db.prepare(`SELECT id FROM interactions WHERE postId = ? AND userId = ? AND type = 'like'`).get(postId, userId);
+    if (existing) {
+      db.prepare(`DELETE FROM interactions WHERE id = ?`).run(existing.id);
+      return { liked: false };
+    }
+  }
+  
+  const result = db.prepare(`
+    INSERT INTO interactions (postId, userId, type, content) VALUES (?, ?, ?, ?)
+  `).run(postId, userId, type, content);
+
+  return {
+    interaction: { id: result.lastInsertRowid, postId, userId, type, content },
+    liked: type === 'like'
+  };
+}
+
+function getPostById(postId, viewerId = 0) {
+  const post = db.prepare(`
+    SELECT p.*, u.username, u.displayName, u.profileImage,
+      (SELECT COUNT(*) FROM interactions WHERE postId = p.id AND type = 'like') as likeCount,
+      (SELECT COUNT(*) FROM interactions WHERE postId = p.id AND type = 'comment') as commentCount,
+      (SELECT COUNT(*) FROM interactions WHERE postId = p.id AND type = 'share') as shareCount,
+      (SELECT COUNT(*) FROM interactions WHERE postId = p.id AND userId = ? AND type = 'like') as isLiked
+    FROM posts p
+    JOIN users u ON p.authorId = u.id
+    WHERE p.id = ?
+  `).get(viewerId, postId);
+
+  if (!post) return null;
+
+  const interactions = db.prepare(`
+    SELECT i.*, u.username, u.displayName, u.profileImage
+    FROM interactions i
+    JOIN users u ON i.userId = u.id
+    WHERE i.postId = ? ORDER BY i.createdAt DESC
+  `).all(postId);
+
+  return { post, interactions };
+}
+
+function deletePost(postId) {
+  const transaction = db.transaction(() => {
+    db.prepare('DELETE FROM interactions WHERE postId = ?').run(postId);
+    db.prepare('DELETE FROM posts WHERE id = ?').run(postId);
+  });
+  transaction();
+}
+
+function getFeedForUser(userId) {
+  const following = db.prepare(`
+    SELECT followingId FROM followers WHERE followerId = ?
+  `).all(userId);
+  
+  const followingIds = following.map(f => f.followingId);
+  followingIds.push(userId); // Include own posts
+
+  const placeholders = followingIds.map(() => '?').join(',');
+  return db.prepare(`
+    SELECT 
+      p.id, p.authorId, p.content, p.imageUrl, p.videoUrl, p.createdAt,
+      u.username, u.displayName, u.profileImage,
+      (SELECT COUNT(*) FROM interactions WHERE postId = p.id AND type = 'like') as likeCount,
+      (SELECT COUNT(*) FROM interactions WHERE postId = p.id AND type = 'comment') as commentCount,
+      (SELECT COUNT(*) FROM interactions WHERE postId = p.id AND type = 'share') as shareCount,
+      (SELECT COUNT(*) FROM interactions WHERE postId = p.id AND userId = ? AND type = 'like') as isLiked
+    FROM posts p
+    JOIN users u ON p.authorId = u.id
+    WHERE p.authorId IN (${placeholders})
+    ORDER BY p.createdAt DESC
+    LIMIT 50
+  `).all(userId, ...followingIds);
+}
+
+function getPostsByUserId(userId) {
+  return db.prepare(`
+    SELECT id, content, imageUrl, videoUrl, createdAt
+    FROM posts
+    WHERE authorId = ?
+    ORDER BY createdAt DESC
+  `).all(userId);
+}
+
+function getAllPosts() {
+  return db.prepare(`
+    SELECT p.*, u.username, u.displayName, u.profileImage,
+      (SELECT COUNT(*) FROM interactions WHERE postId = p.id AND type = 'like') as likeCount,
+      (SELECT COUNT(*) FROM interactions WHERE postId = p.id AND type = 'comment') as commentCount,
+      (SELECT COUNT(*) FROM interactions WHERE postId = p.id AND type = 'share') as shareCount,
+      0 as isLiked
+    FROM posts p
+    JOIN users u ON p.authorId = u.id
+    ORDER BY p.createdAt DESC LIMIT 50
+  `).all();
+}
+
+function getMessagesForThread(threadId, afterMessageId = 0) {
+  const messages = db.prepare(`
+    SELECT * FROM messages 
+    WHERE thread_id = ? AND id > ? 
+    ORDER BY id ASC
+  `).all(threadId, afterMessageId);
+  return messages.map(serializeMessage);
 }
 
 function getUserInbox(userId) {
@@ -204,18 +411,113 @@ function getUserInbox(userId) {
   `).all(userId, userId);
 }
 
-function createPost(authorId, content) {
-  const info = db.prepare(`INSERT INTO posts (authorId, content) VALUES (?, ?)`).run(authorId, content);
-  return db.prepare('SELECT * FROM posts WHERE id = ?').get(info.lastInsertRowid);
+function addParticipant(threadId, userId) {
+  db.prepare(`INSERT OR IGNORE INTO thread_participants (thread_id, user_id) VALUES (?, ?)`).run(threadId, userId);
+}
+
+function removeParticipant(threadId, userId) {
+  db.prepare(`DELETE FROM thread_participants WHERE thread_id = ? AND user_id = ?`).run(threadId, userId);
+}
+
+function deleteThread(threadId) {
+  db.prepare('DELETE FROM threads WHERE id = ?').run(threadId);
+}
+
+function deleteMessage(messageId) {
+  db.prepare('DELETE FROM messages WHERE id = ?').run(messageId);
+}
+
+function updateThreadName(threadId, newName) {
+  db.prepare('UPDATE threads SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?').run(newName, threadId);
+  return getThreadById(threadId);
+}
+
+function blockUser(blockerId, blockedId) {
+  db.prepare(`INSERT OR IGNORE INTO blocks (blocker_id, blocked_id) VALUES (?, ?)`).run(blockerId, blockedId);
+}
+
+function unblockUser(blockerId, blockedId) {
+  db.prepare(`DELETE FROM blocks WHERE blocker_id = ? AND blocked_id = ?`).run(blockerId, blockedId);
+}
+
+function getBlockedUsers(userId) {
+  return db.prepare(`SELECT blocked_id FROM blocks WHERE blocker_id = ?`).all(userId).map(r => r.blocked_id);
+}
+
+function isBlocked(userId, otherUserId) {
+  const row = db.prepare(`
+    SELECT 1 FROM blocks 
+    WHERE (blocker_id = ? AND blocked_id = ?)
+       OR (blocker_id = ? AND blocked_id = ?)
+  `).get(userId, otherUserId, otherUserId, userId);
+  return !!row;
+}
+
+function isBlockedByAny(userId, threadId) {
+  const participants = db.prepare(`SELECT user_id FROM thread_participants WHERE thread_id = ? AND user_id != ?`).all(threadId, userId);
+  for (const p of participants) {
+    if (isBlocked(userId, p.user_id)) return true;
+  }
+  return false;
+}
+
+function createPost(authorId, content, imageUrl = null, videoUrl = null) {
+  const info = db.prepare(`
+    INSERT INTO posts (authorId, content, imageUrl, videoUrl) 
+    VALUES (?, ?, ?, ?)
+  `).run(authorId, content, imageUrl, videoUrl);
+
+  // Return the full post object with author details for the frontend
+  return db.prepare(`
+    SELECT p.*, u.username, u.displayName, u.profileImage
+    FROM posts p
+    JOIN users u ON p.authorId = u.id
+    WHERE p.id = ?
+  `).get(info.lastInsertRowid);
+}
+
+function getRecentPosts() {
+  return db.prepare(`
+    SELECT p.*, u.username, u.displayName 
+    FROM posts p 
+    JOIN users u ON p.authorId = u.id 
+    ORDER BY p.createdAt DESC 
+    LIMIT 50
+  `).all();
 }
 
 module.exports = {
   db,
   dbPath,
+  getThreadById,
   getOrCreateDirectThread,
+  isBlocked,
+  createGroupThread,
   insertMessage,
+  getMessagesForThread,
   getUserInbox,
+  addParticipant,
+  removeParticipant,
+  deleteThread,
+  deleteMessage,
+  updateThreadName,
+  blockUser,
+  unblockUser,
+  getBlockedUsers,
   createPost,
+  deletePost,
+  interactWithPost,
+  getPostById,
+  getFeedForUser,
+  getPostsByUserId,
+  getRecentPosts,
+  getAllPosts,
+  getAllUsers,
+  getUserById,
+  getUserByUsername,
+  toggleFollow,
+  getFollowers,
+  getFollowing,
   serializeThread,
   normalizeUserIds
 };

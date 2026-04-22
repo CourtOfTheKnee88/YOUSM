@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { StyleSheet, Text, View, Pressable, FlatList, SafeAreaView, Modal, ScrollView, TextInput, Alert } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
+import { SERVER_URL } from '../config';
 
-const SERVER_URL = "http://192.168.50.37:3001";
-const CURRENT_USER = "Gage"; 
+const CURRENT_USER = "james"; // Changed to match the ID 1 used in other screens
 const MOCK_CONTACTS = ["James", "Courtney", "Esther", "JohnDoe"];
 
 export default function InboxScreen({ navigation }) {

@@ -5,8 +5,8 @@ import { io } from "socket.io-client";
 import { Ionicons } from '@expo/vector-icons'; 
 import * as ImagePicker from 'expo-image-picker';
 import { useVideoPlayer, VideoView } from 'expo-video'; // SDK 55 Standard
+import { SERVER_URL } from '../config';
 
-const SERVER_URL = "http://192.168.50.37:3001"; 
 
 export default function MessageScreen({ route, navigation }) {
   const { currentUser, targetUser, targetDisplayName, threadId } = route.params;

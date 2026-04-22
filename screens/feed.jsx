@@ -15,10 +15,8 @@ import {
   Share
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { SERVER_URL, CURRENT_USER_ID } from '../config';
 
-const SERVER_URL = 'http://100.66.139.115:3001';
-const CURRENT_USER_ID = 1; // Hardcoded James (id: 1)
-const CURRENT_USERNAME = 'james';
 
 export default function FeedScreen({ navigation }) {
   const [posts, setPosts] = useState([]);
@@ -206,7 +204,7 @@ export default function FeedScreen({ navigation }) {
         {/* Post Image */}
         {item.imageUrl && (
           <Image
-            source={{ uri: item.imageUrl }}
+            source={{ uri: `${SERVER_URL}${item.imageUrl}` }}
             style={styles.postImage}
           />
         )}
