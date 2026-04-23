@@ -8,8 +8,7 @@ export default function CreateScreen({ navigation }) {
         <Text style={styles.badge}>Create</Text>
         <Text style={styles.title}>Choose what you want to build</Text>
         <Text style={styles.subtitle}>
-          This space is for creating posts, communities, and future content tools
-          in YOUSM.
+          This space is for creating posts and communities.
         </Text>
       </View>
 

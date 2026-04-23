@@ -8,32 +8,37 @@ import {
   Image,
   SafeAreaView,
 } from "react-native";
+import { useState } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 
-import TempScreen from "./screens/temp";
 import FeedScreen from "./screens/FeedScreen";
 import CreateScreen from "./screens/CreateScreen";
 import CreateCommunityScreen from "./screens/CreateCommunityScreen";
+import CreateCommunityAnnouncementScreen from "./screens/CreateCommunityAnnouncementScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import EditProfileScreen from "./screens/EditProfileScreen";
 import CommunitiesScreen from "./screens/CommunitiesScreen";
 import CommunityDetailScreen from "./screens/CommunityDetailScreen";
+import CommunityFeedScreen from "./screens/CommunityFeedScreen";
 import DiscoverScreen from "./screens/DiscoverScreen";
 import ModeratorScreen from "./screens/ModeratorScreen";
+import MessagesScreen from "./screens/MessagesScreen";
+import AnnouncementsScreen from "./screens/AnnouncementsScreen";
 
-import { currentUser } from "./data/mockData";
+import {
+  currentUser,
+  communities as initialCommunities,
+} from "./data/mockData";
 
-const RootStack = createNativeStackNavigator();
 const HomeStack = createNativeStackNavigator();
+const FeedStack = createNativeStackNavigator();
 const CommunityStack = createNativeStackNavigator();
 const ProfileStack = createNativeStackNavigator();
 const CreateStack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
-
-const isModerator = currentUser.role === "Moderator";
 
 function HeaderLogo() {
   return (
@@ -45,8 +50,20 @@ function HeaderLogo() {
   );
 }
 
-function HomeScreen({ navigation }) {
-  const firstName = currentUser.name.split(" ")[0];
+function HeaderMessagesButton({ navigation }) {
+  return (
+    <Pressable
+      onPress={() => navigation.navigate("Messages")}
+      style={styles.headerMessageButton}
+    >
+      <MaterialCommunityIcons name="message-text-outline" size={22} color="#FFFFFF" />
+    </Pressable>
+  );
+}
+
+function HomeScreen({ navigation, user }) {
+  const firstName = user.name.split(" ")[0];
+  const isModerator = user.role === "Moderator";
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -95,6 +112,35 @@ function HomeScreen({ navigation }) {
           </Pressable>
         </View>
 
+        <Pressable
+          style={styles.announcementCard}
+          onPress={() => navigation.navigate("Announcements")}
+        >
+          <View style={styles.announcementIconWrap}>
+            <MaterialCommunityIcons
+              name="bullhorn-outline"
+              size={24}
+              color="#042752"
+            />
+          </View>
+
+          <View style={styles.announcementTextWrap}>
+            <Text style={styles.announcementEyebrow}>Campus Announcements</Text>
+            <Text style={styles.announcementTitle}>
+              Library hours extended during finals week
+            </Text>
+            <Text style={styles.announcementText}>
+              Tap to view all campus announcements, updates, and upcoming notices.
+            </Text>
+          </View>
+
+          <MaterialCommunityIcons
+            name="chevron-right"
+            size={22}
+            color="#042752"
+          />
+        </Pressable>
+
         <View style={styles.featuredCard}>
           <View style={styles.featuredImageArea}>
             <View style={styles.featuredOverlay}>
@@ -134,7 +180,6 @@ function HomeScreen({ navigation }) {
 
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>Quick access</Text>
-          <Text style={styles.sectionLink}>YOUSM</Text>
         </View>
 
         <View style={styles.quickGrid}>
@@ -197,7 +242,6 @@ function HomeScreen({ navigation }) {
 
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>For you</Text>
-          <Text style={styles.sectionLink}>Campus</Text>
         </View>
 
         <View style={styles.recommendationCard}>
@@ -219,7 +263,6 @@ function HomeScreen({ navigation }) {
 
         <View style={styles.sectionHeaderRow}>
           <Text style={styles.sectionTitle}>More tools</Text>
-          <Text style={styles.sectionLink}>Demo</Text>
         </View>
 
         <View style={styles.extraCardsWrap}>
@@ -274,29 +317,43 @@ function HomeScreen({ navigation }) {
   );
 }
 
-function HomeStackNavigator() {
+function HomeStackNavigator({
+  communities,
+  user,
+  setUser,
+  communityAnnouncements,
+  setCommunityAnnouncements,
+}) {
+  const isModerator = user.role === "Moderator";
+
   return (
     <HomeStack.Navigator
-      screenOptions={{
+      screenOptions={({ navigation }) => ({
         headerStyle: { backgroundColor: "#042752" },
         headerTintColor: "#FFFFFF",
         headerShadowVisible: false,
         contentStyle: { backgroundColor: "#F7F9FC" },
-      }}
+        headerRight: () => <HeaderMessagesButton navigation={navigation} />,
+      })}
     >
       <HomeStack.Screen
         name="HomeMain"
-        component={HomeScreen}
         options={{
           headerTitle: () => <HeaderLogo />,
           headerTitleAlign: "center",
         }}
-      />
-      <HomeStack.Screen
-        name="Discover"
-        component={DiscoverScreen}
-        options={{ title: "Discover" }}
-      />
+      >
+        {(props) => <HomeScreen {...props} user={user} />}
+      </HomeStack.Screen>
+
+      <HomeStack.Screen name="Discover">
+        {(props) => <DiscoverScreen {...props} communities={communities} />}
+      </HomeStack.Screen>
+
+      <HomeStack.Screen name="Announcements" options={{ title: "Announcements" }}>
+        {(props) => <AnnouncementsScreen {...props} user={user} />}
+      </HomeStack.Screen>
+
       {isModerator && (
         <HomeStack.Screen
           name="Moderator"
@@ -304,83 +361,229 @@ function HomeStackNavigator() {
           options={{ title: "Moderator" }}
         />
       )}
+
+      <HomeStack.Screen name="CommunityDetail" options={{ title: "Community Details" }}>
+        {(props) => (
+          <CommunityDetailScreen {...props} user={user} setUser={setUser} />
+        )}
+      </HomeStack.Screen>
+
+      <HomeStack.Screen name="CommunityFeed" options={{ title: "Community Feed" }}>
+        {(props) => (
+          <CommunityFeedScreen
+            {...props}
+            user={user}
+            communityAnnouncements={communityAnnouncements}
+          />
+        )}
+      </HomeStack.Screen>
+
+      <HomeStack.Screen
+        name="CreateCommunityAnnouncement"
+        options={{ title: "Post Announcement" }}
+      >
+        {(props) => (
+          <CreateCommunityAnnouncementScreen
+            {...props}
+            user={user}
+            communityAnnouncements={communityAnnouncements}
+            setCommunityAnnouncements={setCommunityAnnouncements}
+          />
+        )}
+      </HomeStack.Screen>
+
+      <HomeStack.Screen
+        name="Messages"
+        component={MessagesScreen}
+        options={{ title: "Messages" }}
+      />
     </HomeStack.Navigator>
   );
 }
 
-function CreateStackNavigator() {
+function FeedStackNavigator() {
   return (
-    <CreateStack.Navigator
-      screenOptions={{
+    <FeedStack.Navigator
+      screenOptions={({ navigation }) => ({
         headerStyle: { backgroundColor: "#042752" },
         headerTintColor: "#FFFFFF",
         headerShadowVisible: false,
         contentStyle: { backgroundColor: "#F7F9FC" },
-      }}
+        headerRight: () => <HeaderMessagesButton navigation={navigation} />,
+      })}
+    >
+      <FeedStack.Screen
+        name="FeedMain"
+        component={FeedScreen}
+        options={{ title: "Feed" }}
+      />
+
+      <FeedStack.Screen
+        name="Messages"
+        component={MessagesScreen}
+        options={{ title: "Messages" }}
+      />
+    </FeedStack.Navigator>
+  );
+}
+
+function CreateStackNavigator({ communities, setCommunities, user, setUser }) {
+  return (
+    <CreateStack.Navigator
+      screenOptions={({ navigation }) => ({
+        headerStyle: { backgroundColor: "#042752" },
+        headerTintColor: "#FFFFFF",
+        headerShadowVisible: false,
+        contentStyle: { backgroundColor: "#F7F9FC" },
+        headerRight: () => <HeaderMessagesButton navigation={navigation} />,
+      })}
     >
       <CreateStack.Screen
         name="CreateMain"
         component={CreateScreen}
         options={{ title: "Create" }}
       />
+
+      <CreateStack.Screen name="CreateCommunity" options={{ title: "Create Community" }}>
+        {(props) => (
+          <CreateCommunityScreen
+            {...props}
+            communities={communities}
+            setCommunities={setCommunities}
+            user={user}
+            setUser={setUser}
+          />
+        )}
+      </CreateStack.Screen>
+
+      <CreateStack.Screen name="Announcements" options={{ title: "Announcements" }}>
+        {(props) => <AnnouncementsScreen {...props} user={user} />}
+      </CreateStack.Screen>
+
       <CreateStack.Screen
-        name="CreateCommunity"
-        component={CreateCommunityScreen}
-        options={{ title: "Create Community" }}
+        name="Messages"
+        component={MessagesScreen}
+        options={{ title: "Messages" }}
       />
     </CreateStack.Navigator>
   );
 }
 
-function CommunityStackNavigator() {
+function CommunityStackNavigator({
+  communities,
+  setCommunities,
+  user,
+  setUser,
+  communityAnnouncements,
+  setCommunityAnnouncements,
+}) {
   return (
     <CommunityStack.Navigator
-      screenOptions={{
+      screenOptions={({ navigation }) => ({
         headerStyle: { backgroundColor: "#042752" },
         headerTintColor: "#FFFFFF",
         headerShadowVisible: false,
         contentStyle: { backgroundColor: "#F7F9FC" },
-      }}
+        headerRight: () => <HeaderMessagesButton navigation={navigation} />,
+      })}
     >
+      <CommunityStack.Screen name="CommunitiesMain" options={{ title: "Communities" }}>
+        {(props) => (
+          <CommunitiesScreen
+            {...props}
+            communities={communities}
+            user={user}
+            setUser={setUser}
+          />
+        )}
+      </CommunityStack.Screen>
+
+      <CommunityStack.Screen name="CreateCommunity" options={{ title: "Create Community" }}>
+        {(props) => (
+          <CreateCommunityScreen
+            {...props}
+            communities={communities}
+            setCommunities={setCommunities}
+            user={user}
+            setUser={setUser}
+          />
+        )}
+      </CommunityStack.Screen>
+
+      <CommunityStack.Screen name="CommunityDetail" options={{ title: "Community Details" }}>
+        {(props) => (
+          <CommunityDetailScreen {...props} user={user} setUser={setUser} />
+        )}
+      </CommunityStack.Screen>
+
+      <CommunityStack.Screen name="CommunityFeed" options={{ title: "Community Feed" }}>
+        {(props) => (
+          <CommunityFeedScreen
+            {...props}
+            user={user}
+            communityAnnouncements={communityAnnouncements}
+          />
+        )}
+      </CommunityStack.Screen>
+
       <CommunityStack.Screen
-        name="CommunitiesMain"
-        component={CommunitiesScreen}
-        options={{ title: "Communities" }}
-      />
+        name="CreateCommunityAnnouncement"
+        options={{ title: "Post Announcement" }}
+      >
+        {(props) => (
+          <CreateCommunityAnnouncementScreen
+            {...props}
+            user={user}
+            communityAnnouncements={communityAnnouncements}
+            setCommunityAnnouncements={setCommunityAnnouncements}
+          />
+        )}
+      </CommunityStack.Screen>
+
+      <CommunityStack.Screen name="Announcements" options={{ title: "Announcements" }}>
+        {(props) => <AnnouncementsScreen {...props} user={user} />}
+      </CommunityStack.Screen>
+
       <CommunityStack.Screen
-        name="CreateCommunity"
-        component={CreateCommunityScreen}
-        options={{ title: "Create Community" }}
-      />
-      <CommunityStack.Screen
-        name="CommunityDetail"
-        component={CommunityDetailScreen}
-        options={{ title: "Community Details" }}
+        name="Messages"
+        component={MessagesScreen}
+        options={{ title: "Messages" }}
       />
     </CommunityStack.Navigator>
   );
 }
 
-function ProfileStackNavigator() {
+function ProfileStackNavigator({
+  communities,
+  user,
+  setUser,
+  communityAnnouncements,
+  setCommunityAnnouncements,
+}) {
+  const isModerator = user.role === "Moderator";
+
   return (
     <ProfileStack.Navigator
-      screenOptions={{
+      screenOptions={({ navigation }) => ({
         headerStyle: { backgroundColor: "#042752" },
         headerTintColor: "#FFFFFF",
         headerShadowVisible: false,
         contentStyle: { backgroundColor: "#F7F9FC" },
-      }}
+        headerRight: () => <HeaderMessagesButton navigation={navigation} />,
+      })}
     >
-      <ProfileStack.Screen
-        name="ProfileMain"
-        component={ProfileScreen}
-        options={{ title: "Profile" }}
-      />
-      <ProfileStack.Screen
-        name="EditProfile"
-        component={EditProfileScreen}
-        options={{ title: "Edit Profile" }}
-      />
+      <ProfileStack.Screen name="ProfileMain" options={{ title: "Profile" }}>
+        {(props) => (
+          <ProfileScreen {...props} communities={communities} user={user} />
+        )}
+      </ProfileStack.Screen>
+
+      <ProfileStack.Screen name="EditProfile" options={{ title: "Edit Profile" }}>
+        {(props) => (
+          <EditProfileScreen {...props} user={user} setUser={setUser} />
+        )}
+      </ProfileStack.Screen>
+
       {isModerator && (
         <ProfileStack.Screen
           name="Moderator"
@@ -388,26 +591,73 @@ function ProfileStackNavigator() {
           options={{ title: "Moderator" }}
         />
       )}
+
+      <ProfileStack.Screen name="CommunityDetail" options={{ title: "Community Details" }}>
+        {(props) => (
+          <CommunityDetailScreen {...props} user={user} setUser={setUser} />
+        )}
+      </ProfileStack.Screen>
+
+      <ProfileStack.Screen name="CommunityFeed" options={{ title: "Community Feed" }}>
+        {(props) => (
+          <CommunityFeedScreen
+            {...props}
+            user={user}
+            communityAnnouncements={communityAnnouncements}
+          />
+        )}
+      </ProfileStack.Screen>
+
       <ProfileStack.Screen
-        name="CommunityDetail"
-        component={CommunityDetailScreen}
-        options={{ title: "Community Details" }}
-      />
+        name="CreateCommunityAnnouncement"
+        options={{ title: "Post Announcement" }}
+      >
+        {(props) => (
+          <CreateCommunityAnnouncementScreen
+            {...props}
+            user={user}
+            communityAnnouncements={communityAnnouncements}
+            setCommunityAnnouncements={setCommunityAnnouncements}
+          />
+        )}
+      </ProfileStack.Screen>
+
+      <ProfileStack.Screen name="Communities" options={{ title: "Communities" }}>
+        {(props) => (
+          <CommunitiesScreen
+            {...props}
+            communities={communities}
+            user={user}
+            setUser={setUser}
+          />
+        )}
+      </ProfileStack.Screen>
+
+      <ProfileStack.Screen name="Discover" options={{ title: "Discover" }}>
+        {(props) => <DiscoverScreen {...props} communities={communities} />}
+      </ProfileStack.Screen>
+
+      <ProfileStack.Screen name="Announcements" options={{ title: "Announcements" }}>
+        {(props) => <AnnouncementsScreen {...props} user={user} />}
+      </ProfileStack.Screen>
+
       <ProfileStack.Screen
-        name="Communities"
-        component={CommunitiesScreen}
-        options={{ title: "Communities" }}
-      />
-      <ProfileStack.Screen
-        name="Discover"
-        component={DiscoverScreen}
-        options={{ title: "Discover" }}
+        name="Messages"
+        component={MessagesScreen}
+        options={{ title: "Messages" }}
       />
     </ProfileStack.Navigator>
   );
 }
 
-function MainTabs() {
+function MainTabs({
+  communities,
+  setCommunities,
+  user,
+  setUser,
+  communityAnnouncements,
+  setCommunityAnnouncements,
+}) {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -436,56 +686,94 @@ function MainTabs() {
             iconName = focused
               ? "newspaper-variant"
               : "newspaper-variant-outline";
-          } else if (route.name === "Create") {
-            iconName = "plus";
           } else if (route.name === "Communities") {
-            iconName = focused
-              ? "account-group"
-              : "account-group-outline";
+            iconName = focused ? "account-group" : "account-group-outline";
+          } else if (route.name === "Create") {
+            iconName = focused ? "plus-box" : "plus-box-outline";
           } else if (route.name === "Profile") {
             iconName = focused ? "account" : "account-outline";
           }
 
-          const customSize = route.name === "Create" ? 30 : size;
-
-          if (route.name === "Create") {
-            return (
-              <View style={styles.createTabCircle}>
-                <MaterialCommunityIcons
-                  name={iconName}
-                  size={customSize}
-                  color="#042752"
-                />
-              </View>
-            );
-          }
-
           return (
-            <MaterialCommunityIcons
-              name={iconName}
-              size={customSize}
-              color={color}
-            />
+            <MaterialCommunityIcons name={iconName} size={size} color={color} />
           );
         },
       })}
     >
-      <Tab.Screen name="Home" component={HomeStackNavigator} />
-      <Tab.Screen name="Feed" component={FeedScreen} />
-      <Tab.Screen name="Create" component={CreateStackNavigator} />
-      <Tab.Screen name="Communities" component={CommunityStackNavigator} />
-      <Tab.Screen name="Profile" component={ProfileStackNavigator} />
+      <Tab.Screen name="Home" options={{ title: "Home" }}>
+        {(props) => (
+          <HomeStackNavigator
+            {...props}
+            communities={communities}
+            user={user}
+            setUser={setUser}
+            communityAnnouncements={communityAnnouncements}
+            setCommunityAnnouncements={setCommunityAnnouncements}
+          />
+        )}
+      </Tab.Screen>
+
+      <Tab.Screen name="Feed" options={{ title: "Feed" }}>
+        {(props) => <FeedStackNavigator {...props} />}
+      </Tab.Screen>
+
+      <Tab.Screen name="Communities" options={{ title: "Communities" }}>
+        {(props) => (
+          <CommunityStackNavigator
+            {...props}
+            communities={communities}
+            setCommunities={setCommunities}
+            user={user}
+            setUser={setUser}
+            communityAnnouncements={communityAnnouncements}
+            setCommunityAnnouncements={setCommunityAnnouncements}
+          />
+        )}
+      </Tab.Screen>
+
+      <Tab.Screen name="Create" options={{ title: "Create" }}>
+        {(props) => (
+          <CreateStackNavigator
+            {...props}
+            communities={communities}
+            setCommunities={setCommunities}
+            user={user}
+            setUser={setUser}
+          />
+        )}
+      </Tab.Screen>
+
+      <Tab.Screen name="Profile" options={{ title: "Profile" }}>
+        {(props) => (
+          <ProfileStackNavigator
+            {...props}
+            communities={communities}
+            user={user}
+            setUser={setUser}
+            communityAnnouncements={communityAnnouncements}
+            setCommunityAnnouncements={setCommunityAnnouncements}
+          />
+        )}
+      </Tab.Screen>
     </Tab.Navigator>
   );
 }
 
 export default function App() {
+  const [communities, setCommunities] = useState(initialCommunities);
+  const [user, setUser] = useState(currentUser);
+  const [communityAnnouncements, setCommunityAnnouncements] = useState({});
+
   return (
     <NavigationContainer>
-      <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        <RootStack.Screen name="MainTabs" component={MainTabs} />
-        <RootStack.Screen name="Temp" component={TempScreen} />
-      </RootStack.Navigator>
+      <MainTabs
+        communities={communities}
+        setCommunities={setCommunities}
+        user={user}
+        setUser={setUser}
+        communityAnnouncements={communityAnnouncements}
+        setCommunityAnnouncements={setCommunityAnnouncements}
+      />
     </NavigationContainer>
   );
 }
@@ -500,65 +788,70 @@ const styles = StyleSheet.create({
     backgroundColor: "#F7F9FC",
   },
   scrollContent: {
-    padding: 18,
-    paddingBottom: 90,
+    padding: 16,
+    paddingBottom: 30,
   },
   headerLogo: {
     width: 42,
     height: 42,
   },
+  headerMessageButton: {
+    marginRight: 8,
+    padding: 6,
+    borderRadius: 20,
+  },
   heroSection: {
     backgroundColor: "#042752",
     borderRadius: 28,
-    padding: 20,
+    padding: 22,
     marginBottom: 18,
   },
   heroTopRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 14,
+    alignItems: "center",
   },
   heroTextWrap: {
     flex: 1,
     paddingRight: 12,
   },
   greeting: {
-    color: "#D7E4FF",
+    color: "#F5A841",
     fontSize: 14,
-    marginBottom: 4,
+    fontWeight: "700",
+    marginBottom: 6,
   },
   heroTitle: {
     color: "#FFFFFF",
-    fontSize: 28,
+    fontSize: 30,
     fontWeight: "800",
-    lineHeight: 34,
+    lineHeight: 36,
   },
   heroLogoWrap: {
-    width: 78,
-    height: 78,
-    borderRadius: 39,
+    width: 72,
+    height: 72,
+    borderRadius: 24,
     backgroundColor: "#FFFFFF",
     alignItems: "center",
     justifyContent: "center",
   },
   heroLogo: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     resizeMode: "contain",
   },
   heroSubtitle: {
     color: "#D7E4FF",
     fontSize: 15,
     lineHeight: 22,
+    marginTop: 14,
     marginBottom: 18,
   },
   searchMock: {
     backgroundColor: "#FFFFFF",
     borderRadius: 18,
-    paddingLeft: 14,
-    paddingRight: 8,
-    paddingVertical: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     flexDirection: "row",
     alignItems: "center",
   },
@@ -566,46 +859,90 @@ const styles = StyleSheet.create({
     flex: 1,
     color: "#6B7280",
     fontSize: 14,
-    marginLeft: 8,
+    marginLeft: 10,
   },
   searchFilterButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: "#042752",
     alignItems: "center",
     justifyContent: "center",
+  },
+  announcementCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 22,
+    padding: 16,
+    marginBottom: 18,
+    borderWidth: 2,
+    borderColor: "#F5A841",
+    flexDirection: "row",
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 3,
+  },
+  announcementIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: "#F5A841",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
+  announcementTextWrap: {
+    flex: 1,
+    marginRight: 10,
+  },
+  announcementEyebrow: {
+    color: "#042752",
+    fontWeight: "800",
+    fontSize: 12,
+    marginBottom: 4,
+    textTransform: "uppercase",
+  },
+  announcementTitle: {
+    color: "#042752",
+    fontSize: 16,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+  announcementText: {
+    color: "#374151",
+    fontSize: 14,
+    lineHeight: 20,
   },
   featuredCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 26,
     overflow: "hidden",
-    marginBottom: 20,
+    marginBottom: 18,
     shadowColor: "#000",
     shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
     elevation: 4,
   },
   featuredImageArea: {
-    height: 200,
-    backgroundColor: "#123D7A",
+    height: 190,
+    backgroundColor: "#042752",
     justifyContent: "flex-end",
-    padding: 18,
   },
   featuredOverlay: {
-    backgroundColor: "rgba(4,39,82,0.55)",
-    borderRadius: 18,
-    padding: 14,
+    padding: 18,
+    backgroundColor: "rgba(4, 39, 82, 0.72)",
   },
   featuredBadge: {
-    alignSelf: "flex-start",
-    backgroundColor: "#F5A841",
     color: "#042752",
-    fontWeight: "800",
+    backgroundColor: "#F5A841",
+    alignSelf: "flex-start",
     fontSize: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    fontWeight: "800",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 999,
     overflow: "hidden",
     marginBottom: 10,
@@ -617,14 +954,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   featuredMeta: {
-    color: "#E8EEF9",
-    fontSize: 13,
+    color: "#D7E4FF",
+    fontSize: 14,
   },
   featuredContent: {
     padding: 18,
   },
   featuredDescription: {
-    color: "#1F2937",
+    color: "#000000",
     fontSize: 15,
     lineHeight: 22,
     marginBottom: 16,
@@ -636,62 +973,54 @@ const styles = StyleSheet.create({
   primaryButton: {
     flex: 1,
     backgroundColor: "#042752",
-    borderRadius: 18,
+    borderRadius: 16,
     paddingVertical: 14,
     alignItems: "center",
     marginRight: 10,
   },
   primaryButtonText: {
     color: "#FFFFFF",
-    fontWeight: "800",
+    fontWeight: "700",
     fontSize: 15,
   },
   iconActionButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 16,
     backgroundColor: "#F5A841",
     alignItems: "center",
     justifyContent: "center",
   },
   sectionHeaderRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 14,
+    marginBottom: 12,
   },
   sectionTitle: {
     color: "#042752",
-    fontSize: 21,
+    fontSize: 20,
     fontWeight: "800",
-  },
-  sectionLink: {
-    color: "#F5A841",
-    fontWeight: "700",
-    fontSize: 14,
   },
   quickGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    marginBottom: 20,
+    marginBottom: 18,
   },
   quickCard: {
     width: "48%",
     backgroundColor: "#FFFFFF",
-    borderRadius: 24,
+    borderRadius: 22,
     padding: 16,
     marginBottom: 14,
     shadowColor: "#000",
     shadowOpacity: 0.06,
-    shadowRadius: 10,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
   },
   quickIconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: "#F5A841",
     alignItems: "center",
     justifyContent: "center",
@@ -704,28 +1033,23 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   quickCardText: {
-    color: "#374151",
-    fontSize: 13,
-    lineHeight: 19,
+    color: "#000000",
+    fontSize: 14,
+    lineHeight: 20,
   },
   recommendationCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#042752",
     borderRadius: 24,
-    padding: 16,
-    marginBottom: 20,
+    padding: 18,
     flexDirection: "row",
-    alignItems: "flex-start",
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 3,
+    alignItems: "center",
+    marginBottom: 18,
   },
   recommendationIcon: {
     width: 54,
     height: 54,
     borderRadius: 27,
-    backgroundColor: "#042752",
+    backgroundColor: "#F5A841",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 14,
@@ -734,27 +1058,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   recommendationTitle: {
-    color: "#042752",
-    fontSize: 17,
+    color: "#FFFFFF",
+    fontSize: 18,
     fontWeight: "800",
     marginBottom: 6,
   },
   recommendationText: {
-    color: "#374151",
+    color: "#D7E4FF",
     fontSize: 14,
-    lineHeight: 21,
+    lineHeight: 20,
   },
   extraCardsWrap: {
-    marginBottom: 20,
+    marginBottom: 18,
   },
   extraCard: {
     backgroundColor: "#FFFFFF",
-    borderRadius: 24,
-    padding: 16,
+    borderRadius: 22,
+    padding: 18,
     marginBottom: 14,
     shadowColor: "#000",
     shadowOpacity: 0.06,
-    shadowRadius: 10,
+    shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
   },
@@ -766,36 +1090,23 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   extraCardText: {
-    color: "#374151",
+    color: "#000000",
     fontSize: 14,
     lineHeight: 20,
   },
   bottomAction: {
-    backgroundColor: "#042752",
+    backgroundColor: "#0B5FFF",
     borderRadius: 18,
     paddingVertical: 15,
+    paddingHorizontal: 18,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    flexDirection: "row",
   },
   bottomActionText: {
     color: "#FFFFFF",
-    fontWeight: "800",
+    fontWeight: "700",
     fontSize: 15,
     marginLeft: 8,
-  },
-  createTabCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: "#F5A841",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: -10,
-    shadowColor: "#000",
-    shadowOpacity: 0.14,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 5,
   },
 });

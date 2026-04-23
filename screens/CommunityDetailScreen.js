@@ -1,10 +1,21 @@
-import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
+import { StyleSheet, Text, View, Pressable, ScrollView } from "react-native";
 import InfoCard from "../components/InfoCard";
 
-export default function CommunityDetailScreen({ route }) {
+export default function CommunityDetailScreen({ route, user, setUser, navigation }) {
   const { community } = route.params;
-  const [joined, setJoined] = useState(false);
+
+  const joined = user.joinedCommunityIds.includes(community.id);
+
+  const toggleJoin = () => {
+    const updatedJoinedIds = joined
+      ? user.joinedCommunityIds.filter((id) => id !== community.id)
+      : [...user.joinedCommunityIds, community.id];
+
+    setUser({
+      ...user,
+      joinedCommunityIds: updatedJoinedIds,
+    });
+  };
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
@@ -18,13 +29,20 @@ export default function CommunityDetailScreen({ route }) {
 
         <Pressable
           style={[styles.joinButton, joined && styles.joinedButton]}
-          onPress={() => setJoined(!joined)}
+          onPress={toggleJoin}
         >
           <Text
             style={[styles.joinButtonText, joined && styles.joinedButtonText]}
           >
             {joined ? "Joined Community" : "Join Community"}
           </Text>
+        </Pressable>
+
+        <Pressable
+          style={styles.feedButton}
+          onPress={() => navigation.navigate("CommunityFeed", { community })}
+        >
+          <Text style={styles.feedButtonText}>Open Community Feed</Text>
         </Pressable>
       </View>
 
@@ -68,9 +86,9 @@ const styles = StyleSheet.create({
   typeBadge: {
     backgroundColor: "#042752",
     alignSelf: "flex-start",
+    borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 999,
     marginBottom: 12,
   },
   typeBadgeText: {
@@ -79,27 +97,28 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   name: {
-    fontSize: 26,
-    fontWeight: "800",
     color: "#042752",
-    marginBottom: 6,
+    fontSize: 28,
+    fontWeight: "800",
+    marginBottom: 4,
   },
   category: {
     color: "#F5A841",
     fontWeight: "700",
-    marginBottom: 12,
+    fontSize: 15,
+    marginBottom: 10,
   },
   description: {
     color: "#000000",
-    fontSize: 15,
     lineHeight: 22,
-    marginBottom: 18,
+    marginBottom: 16,
   },
   joinButton: {
     backgroundColor: "#042752",
+    borderRadius: 16,
     paddingVertical: 14,
-    borderRadius: 14,
     alignItems: "center",
+    marginBottom: 12,
   },
   joinedButton: {
     backgroundColor: "#F5A841",
@@ -114,6 +133,19 @@ const styles = StyleSheet.create({
   joinedButtonText: {
     color: "#042752",
   },
+  feedButton: {
+    backgroundColor: "#F5A841",
+    borderRadius: 16,
+    paddingVertical: 14,
+    alignItems: "center",
+    borderWidth: 2,
+    borderColor: "#042752",
+  },
+  feedButtonText: {
+    color: "#042752",
+    fontWeight: "800",
+    fontSize: 15,
+  },
   infoLine: {
     fontSize: 15,
     color: "#000000",
@@ -122,6 +154,6 @@ const styles = StyleSheet.create({
   memberLine: {
     fontSize: 15,
     color: "#000000",
-    marginBottom: 10,
+    marginBottom: 8,
   },
 });

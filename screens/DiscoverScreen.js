@@ -2,9 +2,9 @@ import { useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import SearchBar from "../components/SearchBar";
 import FilterChip from "../components/FilterChip";
-import { communities, people } from "../data/mockData";
+import { people } from "../data/mockData";
 
-export default function DiscoverScreen({ navigation }) {
+export default function DiscoverScreen({ navigation, communities }) {
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
 
@@ -29,7 +29,7 @@ export default function DiscoverScreen({ navigation }) {
         community.category.toLowerCase().includes(query.toLowerCase())
       );
     });
-  }, [query]);
+  }, [query, communities]);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
@@ -98,7 +98,9 @@ export default function DiscoverScreen({ navigation }) {
           <Text style={styles.communityMeta}>
             {community.type} • {community.category}
           </Text>
-          <Text style={styles.communityDescription}>{community.description}</Text>
+          <Text style={styles.communityDescription}>
+            {community.description}
+          </Text>
         </Pressable>
       ))}
     </ScrollView>
@@ -108,48 +110,45 @@ export default function DiscoverScreen({ navigation }) {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F7F9FC",
   },
   container: {
     padding: 16,
+    paddingBottom: 30,
   },
   title: {
+    color: "#042752",
     fontSize: 28,
     fontWeight: "800",
-    color: "#042752",
-    marginBottom: 6,
+    marginBottom: 8,
   },
   subtitle: {
     color: "#000000",
     fontSize: 15,
-    marginBottom: 18,
+    lineHeight: 22,
+    marginBottom: 16,
   },
   filterRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginBottom: 10,
+    marginBottom: 14,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: "700",
     color: "#042752",
-    marginTop: 8,
+    fontSize: 20,
+    fontWeight: "800",
     marginBottom: 12,
+    marginTop: 6,
   },
   personCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 18,
-    padding: 14,
+    padding: 16,
     marginBottom: 12,
-    borderWidth: 2,
-    borderColor: "#F5A841",
     flexDirection: "row",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 7,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    borderWidth: 2,
+    borderColor: "#F5A841",
   },
   personAvatar: {
     width: 52,
@@ -158,9 +157,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F5A841",
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
-    borderWidth: 2,
-    borderColor: "#042752",
+    marginRight: 14,
   },
   personAvatarText: {
     color: "#042752",
@@ -171,18 +168,18 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   personName: {
-    fontWeight: "700",
-    fontSize: 16,
     color: "#042752",
+    fontSize: 17,
+    fontWeight: "800",
   },
   personRole: {
     color: "#F5A841",
     fontWeight: "700",
     marginTop: 2,
+    marginBottom: 2,
   },
   personSubtitle: {
     color: "#000000",
-    marginTop: 2,
   },
   communityCard: {
     backgroundColor: "#FFFFFF",
@@ -191,11 +188,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 2,
     borderColor: "#F5A841",
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 7,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
   },
   communityName: {
     color: "#042752",

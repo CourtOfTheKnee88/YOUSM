@@ -1,34 +1,33 @@
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import ProfileHeader from "../components/ProfileHeader";
 import InfoCard from "../components/InfoCard";
-import { currentUser, communities } from "../data/mockData";
 
-export default function ProfileScreen({ navigation }) {
+export default function ProfileScreen({ navigation, communities, user }) {
   const joinedCommunities = communities.filter((community) =>
-    currentUser.joinedCommunityIds.includes(community.id)
+    user.joinedCommunityIds.includes(community.id)
   );
 
   const renderRoleSection = () => {
-    if (currentUser.role === "Student") {
+    if (user.role === "Student") {
       return (
         <InfoCard title="Academic Information">
-          <Text style={styles.infoLine}>Major: {currentUser.major}</Text>
-          <Text style={styles.infoLine}>Degree: {currentUser.degree}</Text>
+          <Text style={styles.infoLine}>Major: {user.major}</Text>
+          <Text style={styles.infoLine}>Degree: {user.degree}</Text>
           <Text style={styles.infoLine}>
-            Graduation Year: {currentUser.gradYear}
+            Graduation Year: {user.gradYear}
           </Text>
         </InfoCard>
       );
     }
 
-    if (currentUser.role === "Faculty") {
+    if (user.role === "Faculty") {
       return (
         <InfoCard title="Faculty Information">
-          <Text style={styles.infoLine}>Department: {currentUser.department}</Text>
-          <Text style={styles.infoLine}>Degree: {currentUser.degree}</Text>
-          <Text style={styles.infoLine}>Office Hours: {currentUser.officeHours}</Text>
+          <Text style={styles.infoLine}>Department: {user.department}</Text>
+          <Text style={styles.infoLine}>Degree: {user.degree}</Text>
+          <Text style={styles.infoLine}>Office Hours: {user.officeHours}</Text>
           <Text style={styles.infoSubheading}>Courses Teaching</Text>
-          {currentUser.coursesTeaching.map((course) => (
+          {user.coursesTeaching.map((course) => (
             <Text key={course} style={styles.bulletLine}>
               • {course}
             </Text>
@@ -37,30 +36,30 @@ export default function ProfileScreen({ navigation }) {
       );
     }
 
-    if (currentUser.role === "Alumni") {
+    if (user.role === "Alumni") {
       return (
         <InfoCard title="Alumni Information">
-          <Text style={styles.infoLine}>Degree: {currentUser.degree}</Text>
-          <Text style={styles.infoLine}>Major: {currentUser.major}</Text>
+          <Text style={styles.infoLine}>Degree: {user.degree}</Text>
+          <Text style={styles.infoLine}>Major: {user.major}</Text>
           <Text style={styles.infoLine}>
-            Alumni Class Year: {currentUser.alumniClassYear}
+            Alumni Class Year: {user.alumniClassYear}
           </Text>
-          <Text style={styles.infoLine}>Employer: {currentUser.employer}</Text>
-          <Text style={styles.infoLine}>Job Title: {currentUser.jobTitle}</Text>
+          <Text style={styles.infoLine}>Employer: {user.employer}</Text>
+          <Text style={styles.infoLine}>Job Title: {user.jobTitle}</Text>
         </InfoCard>
       );
     }
 
-    if (currentUser.role === "Moderator") {
+    if (user.role === "Moderator") {
       return (
         <InfoCard title="Moderator Information">
           <Text style={styles.infoLine}>
-            Moderation Level: {currentUser.moderationLevel}
+            Moderation Level: {user.moderationLevel}
           </Text>
-          <Text style={styles.infoLine}>Department: {currentUser.department}</Text>
-          <Text style={styles.infoLine}>Office Hours: {currentUser.officeHours}</Text>
+          <Text style={styles.infoLine}>Department: {user.department}</Text>
+          <Text style={styles.infoLine}>Office Hours: {user.officeHours}</Text>
           <Text style={styles.infoSubheading}>Managed Areas</Text>
-          {currentUser.managedAreas.map((area) => (
+          {user.managedAreas.map((area) => (
             <Text key={area} style={styles.bulletLine}>
               • {area}
             </Text>
@@ -75,7 +74,7 @@ export default function ProfileScreen({ navigation }) {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
       <ProfileHeader
-        user={currentUser}
+        user={user}
         onEditPress={() => navigation.navigate("EditProfile")}
       />
 
@@ -83,7 +82,7 @@ export default function ProfileScreen({ navigation }) {
 
       <InfoCard title="Interests">
         <View style={styles.tagWrap}>
-          {currentUser.interests.map((interest) => (
+          {user.interests.map((interest) => (
             <View key={interest} style={styles.tag}>
               <Text style={styles.tagText}>{interest}</Text>
             </View>
@@ -121,7 +120,7 @@ export default function ProfileScreen({ navigation }) {
           <Text style={styles.secondaryButtonText}>Discover</Text>
         </Pressable>
 
-        {currentUser.role === "Moderator" && (
+        {user.role === "Moderator" && (
           <Pressable
             style={styles.moderatorButton}
             onPress={() => navigation.navigate("Moderator")}

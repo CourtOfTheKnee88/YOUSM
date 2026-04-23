@@ -1,14 +1,27 @@
-import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-export default function FeedScreen() {
+export default function MessagesScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
       <View style={styles.hero}>
-        <Text style={styles.badge}>Feed</Text>
-        <Text style={styles.title}>Campus feed coming soon</Text>
+        <View style={styles.iconWrap}>
+          <MaterialCommunityIcons
+            name="message-text-outline"
+            size={32}
+            color="#042752"
+          />
+        </View>
+        <Text style={styles.title}>Messages</Text>
         <Text style={styles.subtitle}>
-          This tab is for social feed.
+          Direct messaging will live here. Placeholder.
+        </Text>
+      </View>
+
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Coming Soon</Text>
+        <Text style={styles.cardText}>
+          Text...
         </Text>
       </View>
     </ScrollView>
@@ -29,18 +42,16 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     padding: 20,
     marginBottom: 16,
+    alignItems: "center",
   },
-  badge: {
-    alignSelf: "flex-start",
+  iconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     backgroundColor: "#F5A841",
-    color: "#042752",
-    fontWeight: "800",
-    fontSize: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-    overflow: "hidden",
-    marginBottom: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
   },
   title: {
     color: "#FFFFFF",
@@ -52,6 +63,7 @@ const styles = StyleSheet.create({
     color: "#D7E4FF",
     fontSize: 15,
     lineHeight: 22,
+    textAlign: "center",
   },
   card: {
     backgroundColor: "#FFFFFF",
@@ -62,37 +74,16 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 3 },
     elevation: 3,
-    marginBottom: 16,
-  },
-  iconWrap: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: "#F5A841",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
   },
   cardTitle: {
     color: "#042752",
     fontSize: 18,
     fontWeight: "800",
-    marginBottom: 10,
+    marginBottom: 8,
   },
   cardText: {
     color: "#374151",
     fontSize: 15,
-    marginBottom: 8,
-  },
-  button: {
-    backgroundColor: "#042752",
-    borderRadius: 16,
-    paddingVertical: 15,
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "800",
+    lineHeight: 22,
   },
 });

@@ -95,6 +95,32 @@ export const users = {
     interests: ["Community Safety", "Events", "Student Support", "Moderation"],
     joinedCommunityIds: ["c4", "c6"],
   },
+
+  admin: {
+    id: "u5",
+    name: "Morgan Ellis",
+    role: "Admin",
+    pronouns: "she/her",
+    bio: "Campus platform administrator helping coordinate official announcements, major updates, and student platform operations.",
+    university: "York College of Pennsylvania",
+    major: "",
+    gradYear: "",
+    degree: "",
+    department: "Campus Operations",
+    officeHours: "Weekdays 9:00 AM - 5:00 PM",
+    coursesTeaching: [],
+    employer: "York College Administration",
+    jobTitle: "Platform Administrator",
+    alumniClassYear: "",
+    moderationLevel: "Admin",
+    managedAreas: [
+      "Official Announcements",
+      "Campus Operations",
+      "Platform Administration",
+    ],
+    interests: ["Operations", "Student Experience", "Campus Communication"],
+    joinedCommunityIds: ["c4", "c6"],
+  },
 };
 
 // Change to test roles:
@@ -102,6 +128,7 @@ export const currentUser = users.student;
 // export const currentUser = users.faculty;
 // export const currentUser = users.alumni;
 // export const currentUser = users.moderator;
+// export const currentUser = users.admin;
 
 export const communities = [
   {
@@ -112,6 +139,8 @@ export const communities = [
     description:
       "A supportive space for students interested in technology, career growth, and collaboration.",
     members: 84,
+    adminId: "u1",
+    moderators: ["u4"],
   },
   {
     id: "c2",
@@ -121,6 +150,8 @@ export const communities = [
     description:
       "A course community for project collaboration, announcements, and peer support.",
     members: 32,
+    adminId: "u2",
+    moderators: ["u4"],
   },
   {
     id: "c3",
@@ -130,6 +161,8 @@ export const communities = [
     description:
       "For students interested in digital forensics, security, and cyber competitions.",
     members: 56,
+    adminId: "u1",
+    moderators: ["u4"],
   },
   {
     id: "c4",
@@ -139,6 +172,8 @@ export const communities = [
     description:
       "Discover campus events, volunteer opportunities, and student activities.",
     members: 118,
+    adminId: "u5",
+    moderators: ["u4"],
   },
   {
     id: "c5",
@@ -148,6 +183,8 @@ export const communities = [
     description:
       "A community for students exploring machine learning, data analysis, and research.",
     members: 41,
+    adminId: "u2",
+    moderators: ["u4"],
   },
   {
     id: "c6",
@@ -157,6 +194,8 @@ export const communities = [
     description:
       "A moderation and campus support space for handling reports, events, and community requests.",
     members: 12,
+    adminId: "u4",
+    moderators: ["u5"],
   },
 ];
 
@@ -190,5 +229,11 @@ export const people = [
     name: "Jordan Brooks",
     role: "Moderator",
     subtitle: "Senior Moderator",
+  },
+  {
+    id: "p6",
+    name: "Morgan Ellis",
+    role: "Admin",
+    subtitle: "Campus Operations Administrator",
   },
 ];

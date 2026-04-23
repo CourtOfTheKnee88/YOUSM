@@ -1,17 +1,25 @@
-import { useState } from "react";
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import CommunityCard from "../components/CommunityCard";
-import { communities, currentUser } from "../data/mockData";
 
-export default function CommunitiesScreen({ navigation }) {
-  const [joinedIds, setJoinedIds] = useState(currentUser.joinedCommunityIds);
+export default function CommunitiesScreen({
+  navigation,
+  communities,
+  user,
+  setUser,
+}) {
+  const joinedIds = user.joinedCommunityIds;
 
   const toggleJoin = (communityId) => {
-    setJoinedIds((prev) =>
-      prev.includes(communityId)
-        ? prev.filter((id) => id !== communityId)
-        : [...prev, communityId]
-    );
+    const alreadyJoined = joinedIds.includes(communityId);
+
+    const updatedJoinedIds = alreadyJoined
+      ? joinedIds.filter((id) => id !== communityId)
+      : [...joinedIds, communityId];
+
+    setUser({
+      ...user,
+      joinedCommunityIds: updatedJoinedIds,
+    });
   };
 
   const joinedCommunities = communities.filter((community) =>
@@ -124,12 +132,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   section: {
-    marginBottom: 12,
+    marginBottom: 18,
   },
   sectionTitle: {
+    color: "#042752",
     fontSize: 20,
     fontWeight: "800",
-    color: "#042752",
     marginBottom: 12,
   },
 });

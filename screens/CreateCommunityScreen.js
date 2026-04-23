@@ -9,7 +9,13 @@ import {
   Pressable,
 } from "react-native";
 
-export default function CreateCommunityScreen() {
+export default function CreateCommunityScreen({
+  navigation,
+  communities,
+  setCommunities,
+  user,
+  setUser,
+}) {
   const [communityName, setCommunityName] = useState("");
   const [communityType, setCommunityType] = useState("");
   const [category, setCategory] = useState("");
@@ -26,15 +32,49 @@ export default function CreateCommunityScreen() {
       return;
     }
 
-    Alert.alert(
-      "Community Created",
-      `${communityName} has been created locally for demo purposes.`
-    );
+    const newCommunityId = `c${communities.length + 1}`;
+
+    const newCommunity = {
+      id: newCommunityId,
+      name: communityName.trim(),
+      type: communityType.trim(),
+      category: category.trim(),
+      description: description.trim(),
+      members: 1,
+      adminId: user.id,
+      moderators: [],
+    };
+
+    setCommunities((prev) => [newCommunity, ...prev]);
+
+    const alreadyJoined = user.joinedCommunityIds.includes(newCommunityId);
+
+    if (!alreadyJoined) {
+      setUser({
+        ...user,
+        joinedCommunityIds: [...user.joinedCommunityIds, newCommunityId],
+      });
+    }
 
     setCommunityName("");
     setCommunityType("");
     setCategory("");
     setDescription("");
+
+    Alert.alert(
+      "Community Created",
+      `${newCommunity.name} has been created and you are now its admin.`,
+      [
+        {
+          text: "OK",
+          onPress: () =>
+            navigation.getParent()?.navigate("Communities", {
+              screen: "CommunityDetail",
+              params: { community: newCommunity },
+            }),
+        },
+      ]
+    );
   };
 
   return (
@@ -202,20 +242,20 @@ const styles = StyleSheet.create({
   },
   previewBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#F5A841",
+    backgroundColor: "#042752",
     borderRadius: 999,
     paddingHorizontal: 12,
     paddingVertical: 6,
     marginBottom: 12,
   },
   previewBadgeText: {
-    color: "#042752",
-    fontWeight: "800",
+    color: "#FFFFFF",
+    fontWeight: "700",
     fontSize: 12,
   },
   previewName: {
     color: "#042752",
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "800",
     marginBottom: 6,
   },
@@ -225,8 +265,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   previewDescription: {
-    color: "#374151",
-    fontSize: 15,
+    color: "#000000",
     lineHeight: 22,
   },
   createButton: {
@@ -238,6 +277,6 @@ const styles = StyleSheet.create({
   createButtonText: {
     color: "#FFFFFF",
     fontWeight: "800",
-    fontSize: 15,
+    fontSize: 16,
   },
 });
