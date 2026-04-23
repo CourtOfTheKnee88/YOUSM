@@ -9,6 +9,7 @@ const postsRouter = require('./routes/posts');
 const usersRouter = require('./routes/users');
 const messagesRouter = require('./routes/messages');
 const threadsRouter = require('./routes/threads');
+const communitiesRouter = require('./routes/communities');
 
 const app = express();
 const server = http.createServer(app);
@@ -30,6 +31,7 @@ app.use('/posts', postsRouter);
 app.use('/users', usersRouter);
 app.use('/messages', messagesRouter);
 app.use('/threads', threadsRouter);
+app.use('/communities', communitiesRouter);
 
 // Health check
 app.get('/health', (req, res) => {

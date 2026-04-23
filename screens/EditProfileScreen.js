@@ -7,26 +7,54 @@ import {
   TextInput,
   View,
   Pressable,
+  ActivityIndicator
 } from "react-native";
-import { currentUser } from "../data/mockData";
+import { SERVER_URL, CURRENT_USER_ID } from "../config";
+import { COLORS, SPACING } from "../theme";
 
-export default function EditProfileScreen() {
-  const [name, setName] = useState(currentUser.name);
-  const [pronouns, setPronouns] = useState(currentUser.pronouns);
-  const [bio, setBio] = useState(currentUser.bio);
-  const [major, setMajor] = useState(currentUser.major || "");
-  const [gradYear, setGradYear] = useState(currentUser.gradYear || "");
-  const [department, setDepartment] = useState(currentUser.department || "");
-  const [officeHours, setOfficeHours] = useState(currentUser.officeHours || "");
-  const [employer, setEmployer] = useState(currentUser.employer || "");
-  const [jobTitle, setJobTitle] = useState(currentUser.jobTitle || "");
+export default function EditProfileScreen({ route, navigation }) {
+  const { user } = route.params;
+
+  const [displayName, setDisplayName] = useState(user.displayName || "");
+  const [pronouns, setPronouns] = useState(user.pronouns || "");
+  const [bio, setBio] = useState(user.bio || "");
+  const [major, setMajor] = useState(user.major || "");
+  const [gradYear, setGradYear] = useState(user.gradYear || "");
+  const [department, setDepartment] = useState(user.department || "");
+  const [officeHours, setOfficeHours] = useState(user.officeHours || "");
+  const [employer, setEmployer] = useState(user.employer || "");
+  const [jobTitle, setJobTitle] = useState(user.jobTitle || "");
   const [moderationLevel, setModerationLevel] = useState(
-    currentUser.moderationLevel || ""
+    user.moderationLevel || ""
   );
-  const [interests, setInterests] = useState(currentUser.interests.join(", "));
+  const [interests, setInterests] = useState(user.interests || "");
+  const [loading, setLoading] = useState(false);
 
-  const handleSave = () => {
-    Alert.alert("Profile Saved", "Your profile changes were saved locally.");
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${SERVER_URL}/users/${CURRENT_USER_ID}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          displayName, pronouns, bio, major, gradYear, 
+          department, officeHours, employer, jobTitle, 
+          moderationLevel, interests, role: user.role
+        })
+      });
+
+      if (res.ok) {
+        Alert.alert("Success", "Profile updated successfully!");
+        navigation.goBack();
+      } else {
+        Alert.alert("Error", "Failed to update profile.");
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "Network request failed.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -38,7 +66,7 @@ export default function EditProfileScreen() {
 
       <View style={styles.card}>
         <Text style={styles.label}>Preferred Name</Text>
-        <TextInput style={styles.input} value={name} onChangeText={setName} />
+        <TextInput style={styles.input} value={displayName} onChangeText={setDisplayName} />
 
         <Text style={styles.label}>Pronouns</Text>
         <TextInput
@@ -55,7 +83,7 @@ export default function EditProfileScreen() {
           multiline
         />
 
-        {(currentUser.role === "Student" || currentUser.role === "Alumni") && (
+        {(user.role === "Student" || user.role === "Alumni") && (
           <>
             <Text style={styles.label}>Major</Text>
             <TextInput
@@ -66,7 +94,7 @@ export default function EditProfileScreen() {
           </>
         )}
 
-        {currentUser.role === "Student" && (
+        {user.role === "Student" && (
           <>
             <Text style={styles.label}>Graduation Year</Text>
             <TextInput
@@ -77,7 +105,7 @@ export default function EditProfileScreen() {
           </>
         )}
 
-        {(currentUser.role === "Faculty" || currentUser.role === "Moderator") && (
+        {(user.role === "Faculty" || user.role === "Moderator") && (
           <>
             <Text style={styles.label}>Department</Text>
             <TextInput
@@ -95,7 +123,7 @@ export default function EditProfileScreen() {
           </>
         )}
 
-        {currentUser.role === "Alumni" && (
+        {user.role === "Alumni" && (
           <>
             <Text style={styles.label}>Employer</Text>
             <TextInput
@@ -113,7 +141,7 @@ export default function EditProfileScreen() {
           </>
         )}
 
-        {currentUser.role === "Moderator" && (
+        {user.role === "Moderator" && (
           <>
             <Text style={styles.label}>Moderation Level</Text>
             <TextInput
@@ -133,8 +161,8 @@ export default function EditProfileScreen() {
         />
       </View>
 
-      <Pressable style={styles.saveButton} onPress={handleSave}>
-        <Text style={styles.saveButtonText}>Save Changes</Text>
+      <Pressable style={[styles.saveButton, loading && { opacity: 0.7 }]} onPress={handleSave} disabled={loading}>
+        {loading ? <ActivityIndicator color="#FFF" /> : <Text style={styles.saveButtonText}>Save Changes</Text>}
       </Pressable>
     </ScrollView>
   );
@@ -143,15 +171,16 @@ export default function EditProfileScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: COLORS.background,
   },
   container: {
-    padding: 16,
+    padding: SPACING.padding,
+    paddingBottom: 40,
   },
   title: {
     fontSize: 28,
     fontWeight: "800",
-    color: "#042752",
+    color: COLORS.primary,
     marginBottom: 6,
   },
   subtitle: {

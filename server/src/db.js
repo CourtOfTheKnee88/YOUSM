@@ -26,6 +26,17 @@ function initializeDatabase() {
       displayName TEXT,
       bio TEXT,
       profileImage TEXT,
+      role TEXT DEFAULT 'Student',
+      pronouns TEXT,
+      major TEXT,
+      gradYear TEXT,
+      degree TEXT,
+      department TEXT,
+      officeHours TEXT,
+      employer TEXT,
+      jobTitle TEXT,
+      moderationLevel TEXT,
+      interests TEXT,
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -69,6 +80,32 @@ function initializeDatabase() {
       createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (postId) REFERENCES posts(id),
       FOREIGN KEY (userId) REFERENCES users(id)
+    )
+  `);
+
+  // Communities table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS communities (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      type TEXT,
+      category TEXT,
+      description TEXT,
+      creatorId INTEGER,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Community membership
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS community_members (
+      communityId INTEGER NOT NULL,
+      userId INTEGER NOT NULL,
+      role TEXT DEFAULT 'member',
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (communityId, userId),
+      FOREIGN KEY (communityId) REFERENCES communities(id) ON DELETE CASCADE,
+      FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
 
@@ -130,6 +167,21 @@ function initializeDatabase() {
       // User already exists
     }
   });
+
+  // Insert initial communities if none exist
+  const commCount = db.prepare('SELECT COUNT(*) as count FROM communities').get().count;
+  if (commCount === 0) {
+    const initialCommunities = [
+      { name: "Women in Computing", type: "Club", category: "Academic", description: "A supportive space for students interested in technology." },
+      { name: "Software Engineering", type: "Course", category: "Class", description: "A course community for project collaboration." },
+      { name: "Campus Hiking Club", type: "Club", category: "Social", description: "Explore the outdoors with fellow students." },
+      { name: "Chess Society", type: "Club", category: "Social", description: "Strategic matches and tournaments for all levels." }
+    ];
+    const insert = db.prepare('INSERT INTO communities (name, type, category, description) VALUES (?, ?, ?, ?)');
+    initialCommunities.forEach(c => {
+      insert.run(c.name, c.type, c.category, c.description);
+    });
+  }
 
   return db;
 }
@@ -205,12 +257,24 @@ function getAllUsers() {
 
 function getUserById(userId) {
   return db.prepare(`
-    SELECT id, username, displayName, bio, profileImage, createdAt,
+    SELECT id, username, displayName, bio, profileImage, role, pronouns, major, gradYear, degree, department, officeHours, employer, jobTitle, moderationLevel, interests, createdAt,
       (SELECT COUNT(*) FROM followers WHERE followingId = ?) as followerCount,
       (SELECT COUNT(*) FROM followers WHERE followerId = ?) as followingCount
     FROM users
     WHERE id = ?
   `).get(userId, userId, userId);
+}
+
+function updateUser(userId, data) {
+  const { displayName, bio, pronouns, major, gradYear, degree, department, officeHours, employer, jobTitle, moderationLevel, interests, role } = data;
+  db.prepare(`
+    UPDATE users SET 
+      displayName = ?, bio = ?, pronouns = ?, major = ?, gradYear = ?, 
+      degree = ?, department = ?, officeHours = ?, employer = ?, 
+      jobTitle = ?, moderationLevel = ?, interests = ?, role = ?
+    WHERE id = ?
+  `).run(displayName, bio, pronouns, major, gradYear, degree, department, officeHours, employer, jobTitle, moderationLevel, interests, role, userId);
+  return getUserById(userId);
 }
 
 function getUserByUsername(username) {
@@ -372,6 +436,62 @@ function getPostsByUserId(userId) {
   `).all(userId);
 }
 
+function getAllCommunities() {
+  return db.prepare(`
+    SELECT c.*, 
+      (SELECT COUNT(*) FROM community_members WHERE communityId = c.id) as memberCount
+    FROM communities c
+    ORDER BY c.name
+  `).all();
+}
+
+function getCommunityById(id, userId = null) {
+  const community = db.prepare(`
+    SELECT c.*, 
+      (SELECT COUNT(*) FROM community_members WHERE communityId = c.id) as memberCount
+    FROM communities c
+    WHERE c.id = ?
+  `).get(id);
+
+  if (community && userId) {
+    const membership = db.prepare(`
+      SELECT 1 FROM community_members WHERE communityId = ? AND userId = ?
+    `).get(id, userId);
+    community.isMember = !!membership;
+  }
+
+  return community;
+}
+
+function joinCommunity(communityId, userId) {
+  db.prepare(`INSERT OR IGNORE INTO community_members (communityId, userId) VALUES (?, ?)`).run(communityId, userId);
+}
+
+function leaveCommunity(communityId, userId) {
+  db.prepare(`DELETE FROM community_members WHERE communityId = ? AND userId = ?`).run(communityId, userId);
+}
+
+function getCommunitiesByUserId(userId) {
+  return db.prepare(`
+    SELECT c.* 
+    FROM communities c
+    JOIN community_members cm ON c.id = cm.communityId
+    WHERE cm.userId = ?
+  `).all(userId);
+}
+
+function createCommunity(name, type, category, description, creatorId) {
+  const result = db.prepare(`
+    INSERT INTO communities (name, type, category, description, creatorId) 
+    VALUES (?, ?, ?, ?, ?)
+  `).run(name, type, category, description, creatorId);
+  
+  const id = result.lastInsertRowid;
+  db.prepare(`INSERT INTO community_members (communityId, userId, role) VALUES (?, ?, 'admin')`).run(id, creatorId);
+  return getCommunityById(id);
+}
+
+
 function getAllPosts() {
   return db.prepare(`
     SELECT p.*, u.username, u.displayName, u.profileImage,
@@ -517,6 +637,12 @@ module.exports = {
   getUserByUsername,
   toggleFollow,
   getFollowers,
+  getAllCommunities,
+  getCommunityById,
+  joinCommunity,
+  leaveCommunity,
+  getCommunitiesByUserId,
+  createCommunity,
   getFollowing,
   serializeThread,
   normalizeUserIds

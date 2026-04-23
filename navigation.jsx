@@ -4,6 +4,11 @@ import InboxScreen from "./screens/InboxScreen";
 import MessageScreen from "./screens/MessageScreen";
 import LoginScreen from "./screens/Login";
 import HomeScreen, { HeaderLogo } from "./screens/HomeScreen";
+import ProfileScreen from "./screens/ProfileScreen.js";
+import EditProfileScreen from "./screens/EditProfileScreen.js";
+import CommunitiesScreen from "./screens/CommunitiesScreen.jsx";
+import CommunityDetailScreen from "./screens/CommunityDetailScreen.jsx";
+import CreateCommunityScreen from "./screens/CreateCommunityScreen.jsx";
 
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
@@ -33,6 +38,51 @@ function HomeStack() {
   );
 }
 
+// Community Stack
+function CommunityStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: COLORS.primary },
+        headerTintColor: "#FFFFFF",
+      }}
+    >
+      <Stack.Screen
+        name="CommunitiesHome"
+        component={CommunitiesScreen}
+        options={{ title: "Communities" }}
+      />
+      <Stack.Screen
+        name="CommunityDetail"
+        component={CommunityDetailScreen}
+        options={({ route }) => ({ title: route.params?.name || "Community" })}
+      />
+      <Stack.Screen
+        name="CreateCommunity"
+        component={CreateCommunityScreen}
+        options={{ title: "Start a Group" }}
+      />
+    </Stack.Navigator>
+  );
+}
+
+// Profile Stack
+function ProfileStack() {
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: COLORS.primary },
+        headerTintColor: "#FFFFFF",
+      }}
+    >
+      <Stack.Screen name="ProfileHome" component={ProfileScreen} options={{ title: "My Profile" }} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ title: "Edit Profile" }} />
+      <Stack.Screen name="CommunityDetail" component={CommunityDetailScreen} options={({ route }) => ({ title: route.params?.name || "Community" })} />
+      <Stack.Screen name="Communities" component={CommunityStack} options={{ headerShown: false }} />
+    </Stack.Navigator>
+  );
+}
+
 // Home Stack
 function FeedStack() {
   return (
@@ -40,7 +90,7 @@ function FeedStack() {
       <Stack.Screen
         name="FeedHome"
         component={FeedScreen}
-        options={{ title: "YOUSM", headerShown: true }}
+        options={{ title: "Feed", headerShown: true }}
       />
     </Stack.Navigator>
   );
@@ -88,11 +138,15 @@ export const NavigationStack = () => {
             let iconName;
 
             if (route.name === 'Home') {
-              return <Ionicons name={focused ? 'home' : 'home-outline'} size={size} color={color} />;
+              iconName = focused ? 'home' : 'home-outline';
             } else if (route.name === 'Feed') {
               iconName = focused ? 'newspaper' : 'newspaper-outline';
             } else if (route.name === 'Post') {
               iconName = focused ? 'add-circle' : 'add-circle-outline';
+            } else if (route.name === 'Communities') {
+              return <MaterialCommunityIcons name={focused ? 'account-group' : 'account-group-outline'} size={size} color={color} />;
+            } else if (route.name === 'Profile') {
+              iconName = focused ? 'person' : 'person-outline';
             } else if (route.name === 'Inbox') {
               iconName = focused ? 'mail' : 'mail-outline';
             }
@@ -117,6 +171,16 @@ export const NavigationStack = () => {
           name="Post"
           component={PostStack}
           options={{ title: 'Post' }}
+        />
+        <Tab.Screen
+          name="Communities"
+          component={CommunityStack}
+          options={{ title: 'Clubs' }}
+        />
+        <Tab.Screen
+          name="Profile"
+          component={ProfileStack}
+          options={{ title: 'Profile' }}
         />
         <Tab.Screen
           name="Inbox"

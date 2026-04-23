@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getAllUsers, getUserById, getUserByUsername, toggleFollow, getFollowers, getFollowing, getPostsByUserId } = require('../db');
+const { getAllUsers, getUserById, getUserByUsername, toggleFollow, getFollowers, getFollowing, getPostsByUserId, updateUser } = require('../db');
 
 // GET all users
 router.get('/', (req, res) => {
@@ -30,6 +30,17 @@ router.get('/:userId', (req, res) => {
   } catch (error) {
     console.error('Error fetching user:', error);
     res.status(500).json({ error: 'Failed to fetch user' });
+  }
+});
+
+// PATCH update user profile
+router.patch('/:userId', (req, res) => {
+  try {
+    const user = updateUser(parseInt(req.params.userId), req.body);
+    res.json({ user });
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ error: 'Failed to update user' });
   }
 });
 
