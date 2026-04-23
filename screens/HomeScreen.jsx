@@ -53,7 +53,7 @@ export default function HomeScreen({ navigation }) {
               Connect with students in tech, explore events, and find your place in the campus computing community.
             </Text>
             <View style={styles.featuredButtonRow}>
-              <Pressable style={styles.primaryButton}>
+              <Pressable style={styles.primaryButton} onPress={() => navigation.navigate("Communities")}>
                 <Text style={styles.primaryButtonText}>Explore Groups</Text>
               </Pressable>
             </View>
@@ -73,9 +73,9 @@ export default function HomeScreen({ navigation }) {
             onPress={() => navigation.navigate("Post")} 
           />
           <QuickCard 
-            title="Messages" 
-            icon="message-outline" 
-            onPress={() => navigation.navigate("Inbox")} 
+            title="Communities" 
+            icon="account-group-outline" 
+            onPress={() => navigation.navigate("Communities")} 
           />
           <QuickCard 
             title="Profile" 
