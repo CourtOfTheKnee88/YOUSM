@@ -10,28 +10,48 @@ export const DatabaseProvider = ({ children }) => {
 
   useEffect(() => {
     async function init() {
+      const database = await SQLite.openDatabaseAsync("YOUSM.db");
+
+      // Run your migrations/table creation
+      await database.execAsync(`
+        PRAGMA journal_mode = WAL;
+        CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY NOT NULL, username TEXT UNIQUE, password TEXT, email TEXT UNIQUE, role TEXT);
+      `);
+
+      // Migration: Add security question columns if they don't exist
       try {
-        const database = await SQLite.openDatabaseAsync("YOUSM.db");
+        // Get all columns in the users table
+        const columns = await database.getAllAsync("PRAGMA table_info(users);");
 
-        // Run your migrations/table creation
-        await database.execAsync(`
-          PRAGMA journal_mode = WAL;
-          CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY NOT NULL, username TEXT, password TEXT, email TEXT, role TEXT);
-        `);
+        // Check if securityQuestion column exists
+        const hasSecurityQuestion = columns.some(
+          (col) => col.name === "securityQuestion",
+        );
 
-        setDb(database);
-        setIsReady(true);
+        if (!hasSecurityQuestion) {
+          await database.execAsync(`
+            ALTER TABLE users ADD COLUMN securityQuestion TEXT;
+            ALTER TABLE users ADD COLUMN securityQA TEXT;
+          `);
+          console.log(
+            "Migration: Added securityQuestion and securityQA columns",
+          );
+        } else {
+          console.log("Migration: Security columns already exist");
+        }
       } catch (error) {
-        console.error("Database initialization error:", error);
-        setIsReady(true); // Still mark as ready even if there's an error so app doesn't hang
+        console.log("Migration check error:", error.message);
       }
+
+      setDb(database);
+      setIsReady(true);
     }
     init();
   }, []);
 
   if (!isReady) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <View>
         <Text>Loading database...</Text>
       </View>
     );
