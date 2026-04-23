@@ -13,6 +13,8 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
 import { useDatabase } from "../database";
+import { useAuth } from "../navigation";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState("");
@@ -29,6 +31,7 @@ export default function LoginScreen({ navigation }) {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
   const db = useDatabase();
+  const { signIn } = useAuth();
 
   const handleLogin = async () => {
     if (!username.trim()) {
@@ -69,8 +72,13 @@ export default function LoginScreen({ navigation }) {
 
       // Login successful
       Alert.alert("Success", "Login successful!");
-      // Navigate to Feed with user data
-      navigation.navigate("Feed", { userId: user.id, userRole: user.role });
+      // Save user data to AsyncStorage
+      await AsyncStorage.setItem("userToken", `token_${user.id}`);
+      await AsyncStorage.setItem("userId", user.id.toString());
+      await AsyncStorage.setItem("userRole", user.role);
+      await AsyncStorage.setItem("username", username);
+      // Call signIn from auth context
+      await signIn(username, password);
     } catch (error) {
       Alert.alert("Error", error.message || "Login failed. Please try again.");
     } finally {

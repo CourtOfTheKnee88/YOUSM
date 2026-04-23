@@ -1,11 +1,13 @@
 import React from "react";
 import { DatabaseProvider } from "./database";
-import { NavigationStack } from "./navigation";
+import { NavigationStack, AuthProvider } from "./navigation";
 
 export default function App() {
   return (
     <DatabaseProvider>
-      <NavigationStack />
+      <AuthProvider>
+        <NavigationStack />
+      </AuthProvider>
     </DatabaseProvider>
   );
 }
