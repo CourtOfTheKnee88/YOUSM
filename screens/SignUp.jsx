@@ -14,6 +14,8 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
 import { useDatabase } from "../database";
+import { useAuth } from "../navigation";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const SECURITY_QUESTIONS = [
   "What city were you born in?",
@@ -41,6 +43,7 @@ export default function SignUpScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const db = useDatabase();
+  const { signUp } = useAuth();
 
   const validateForm = () => {
     if (!username.trim()) {
@@ -135,11 +138,15 @@ export default function SignUpScreen({ navigation }) {
         ],
       );
 
-      Alert.alert("Success", "Account created successfully! Please log in.");
-      // Navigate to login screen on success
-      if (navigation) {
-        navigation.navigate("Login");
-      }
+      Alert.alert("Success", "Account created successfully!");
+      // Save user data to AsyncStorage
+      const newUserId = result.lastInsertRowId;
+      await AsyncStorage.setItem("userToken", `token_${newUserId}`);
+      await AsyncStorage.setItem("userId", newUserId.toString());
+      await AsyncStorage.setItem("userRole", selectedRole.toLowerCase());
+      await AsyncStorage.setItem("username", username);
+      // Call signUp from auth context to automatically log in
+      await signUp(username, email);
     } catch (error) {
       Alert.alert(
         "Error",
