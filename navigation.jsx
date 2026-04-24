@@ -9,6 +9,9 @@ import EditProfileScreen from "./screens/EditProfileScreen.js";
 import CommunitiesScreen from "./screens/CommunitiesScreen.jsx";
 import CommunityDetailScreen from "./screens/CommunityDetailScreen.jsx";
 import CreateCommunityScreen from "./screens/CreateCommunityScreen.jsx";
+import CommunityFeedScreen from "./screens/CommunityFeedScreen.jsx";
+import CommunityAdminScreen from "./screens/CommunityAdminScreen.jsx";
+import CreateCommunityPostScreen from "./screens/CreateCommunityPostScreen.jsx";
 import SignUpScreen from "./screens/SignUp";
 import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
@@ -17,7 +20,6 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { COLORS } from "./theme";
 import {
-  useState,
   useEffect,
   createContext,
   useContext,
@@ -26,15 +28,13 @@ import {
 import { View, Text } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const Stack = createNativeStackNavigator(); // Used for nested stacks and auth
+const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Auth Context
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
-// Dashboard Stack
 function HomeStack() {
   return (
     <Stack.Navigator
@@ -55,7 +55,6 @@ function HomeStack() {
   );
 }
 
-// Community Stack
 function CommunityStack() {
   return (
     <Stack.Navigator
@@ -69,11 +68,46 @@ function CommunityStack() {
         component={CommunitiesScreen}
         options={{ title: "Communities" }}
       />
+
       <Stack.Screen
         name="CommunityDetail"
         component={CommunityDetailScreen}
-        options={({ route }) => ({ title: route.params?.name || "Community" })}
+        options={({ route }) => ({
+          title: route.params?.name || "Community",
+        })}
       />
+
+      <Stack.Screen
+        name="CommunityFeed"
+        component={CommunityFeedScreen}
+        options={({ route }) => ({
+          title: route.params?.name
+            ? `${route.params.name} Feed`
+            : "Community Feed",
+        })}
+      />
+
+      <Stack.Screen
+        name="CreateCommunityPost"
+        component={CreateCommunityPostScreen}
+        options={({ route }) => ({
+          title:
+            route.params?.postType === "announcement"
+              ? "Create Announcement"
+              : "Create Community Post",
+        })}
+      />
+
+      <Stack.Screen
+        name="CommunityAdmin"
+        component={CommunityAdminScreen}
+        options={({ route }) => ({
+          title: route.params?.name
+            ? `${route.params.name} Admin`
+            : "Community Admin",
+        })}
+      />
+
       <Stack.Screen
         name="CreateCommunity"
         component={CreateCommunityScreen}
@@ -83,7 +117,6 @@ function CommunityStack() {
   );
 }
 
-// Profile Stack
 function ProfileStack() {
   return (
     <Stack.Navigator
@@ -97,16 +130,52 @@ function ProfileStack() {
         component={ProfileScreen}
         options={{ title: "My Profile" }}
       />
+
       <Stack.Screen
         name="EditProfile"
         component={EditProfileScreen}
         options={{ title: "Edit Profile" }}
       />
+
       <Stack.Screen
         name="CommunityDetail"
         component={CommunityDetailScreen}
-        options={({ route }) => ({ title: route.params?.name || "Community" })}
+        options={({ route }) => ({
+          title: route.params?.name || "Community",
+        })}
       />
+
+      <Stack.Screen
+        name="CommunityFeed"
+        component={CommunityFeedScreen}
+        options={({ route }) => ({
+          title: route.params?.name
+            ? `${route.params.name} Feed`
+            : "Community Feed",
+        })}
+      />
+
+      <Stack.Screen
+        name="CreateCommunityPost"
+        component={CreateCommunityPostScreen}
+        options={({ route }) => ({
+          title:
+            route.params?.postType === "announcement"
+              ? "Create Announcement"
+              : "Create Community Post",
+        })}
+      />
+
+      <Stack.Screen
+        name="CommunityAdmin"
+        component={CommunityAdminScreen}
+        options={({ route }) => ({
+          title: route.params?.name
+            ? `${route.params.name} Admin`
+            : "Community Admin",
+        })}
+      />
+
       <Stack.Screen
         name="Communities"
         component={CommunityStack}
@@ -116,7 +185,6 @@ function ProfileStack() {
   );
 }
 
-// Home Stack
 function FeedStack() {
   return (
     <Stack.Navigator>
@@ -129,7 +197,6 @@ function FeedStack() {
   );
 }
 
-// Post Stack
 function PostStack() {
   return (
     <Stack.Navigator>
@@ -142,7 +209,6 @@ function PostStack() {
   );
 }
 
-// Messaging Stack
 function InboxStack() {
   return (
     <Stack.Navigator>
@@ -151,16 +217,18 @@ function InboxStack() {
         component={InboxScreen}
         options={{ title: "Messages", headerShown: true }}
       />
+
       <Stack.Screen
         name="Message"
         component={MessageScreen}
-        options={({ route }) => ({ title: route.params?.threadName || "Chat" })}
+        options={({ route }) => ({
+          title: route.params?.threadName || "Chat",
+        })}
       />
     </Stack.Navigator>
   );
 }
 
-// Auth Stack (Login & SignUp)
 function AuthStack() {
   return (
     <Stack.Navigator
@@ -175,7 +243,6 @@ function AuthStack() {
   );
 }
 
-// Main App Stack (Tab Navigator)
 function AppStack() {
   return (
     <Tab.Navigator
@@ -215,26 +282,31 @@ function AppStack() {
         component={HomeStack}
         options={{ title: "Home" }}
       />
+
       <Tab.Screen
         name="Feed"
         component={FeedStack}
         options={{ title: "Feed" }}
       />
+
       <Tab.Screen
         name="Post"
         component={PostStack}
         options={{ title: "Post" }}
       />
+
       <Tab.Screen
         name="Communities"
         component={CommunityStack}
         options={{ title: "Clubs" }}
       />
+
       <Tab.Screen
         name="Profile"
         component={ProfileStack}
         options={{ title: "Profile" }}
       />
+
       <Tab.Screen
         name="Inbox"
         component={InboxStack}
@@ -244,7 +316,6 @@ function AppStack() {
   );
 }
 
-// Reducer for auth state
 const authReducer = (state, action) => {
   switch (action.type) {
     case "RESTORE_TOKEN":
@@ -255,6 +326,7 @@ const authReducer = (state, action) => {
         userRole: action.userRole,
         isLoading: false,
       };
+
     case "SIGN_IN":
       return {
         ...state,
@@ -262,7 +334,9 @@ const authReducer = (state, action) => {
         userToken: action.token,
         userId: action.userId,
         userRole: action.userRole,
+        isLoading: false,
       };
+
     case "SIGN_OUT":
       return {
         ...state,
@@ -270,18 +344,20 @@ const authReducer = (state, action) => {
         userToken: null,
         userId: null,
         userRole: null,
+        isLoading: false,
       };
+
     case "REST":
       return {
         ...state,
         isLoading: false,
       };
+
     default:
       return state;
   }
 };
 
-// Auth Provider Component
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, {
     isLoading: true,
@@ -294,7 +370,6 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const bootstrapAsync = async () => {
       try {
-        // Try to restore token from storage
         const token = await AsyncStorage.getItem("userToken");
         const userId = await AsyncStorage.getItem("userId");
         const userRole = await AsyncStorage.getItem("userRole");
@@ -319,17 +394,19 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const authContext = {
-    signIn: async (username, password) => {
+    signIn: async () => {
       try {
         const token = await AsyncStorage.getItem("userToken");
         const userId = await AsyncStorage.getItem("userId");
         const userRole = await AsyncStorage.getItem("userRole");
+
         dispatch({
           type: "SIGN_IN",
           token,
           userId,
           userRole,
         });
+
         return true;
       } catch (error) {
         console.log("Sign in error:", error);
@@ -337,17 +414,19 @@ export const AuthProvider = ({ children }) => {
       }
     },
 
-    signUp: async (username, email) => {
+    signUp: async () => {
       try {
         const token = await AsyncStorage.getItem("userToken");
         const userId = await AsyncStorage.getItem("userId");
         const userRole = await AsyncStorage.getItem("userRole");
+
         dispatch({
           type: "SIGN_IN",
           token,
           userId,
           userRole,
         });
+
         return true;
       } catch (error) {
         console.log("Sign up error:", error);
@@ -361,6 +440,7 @@ export const AuthProvider = ({ children }) => {
         await AsyncStorage.removeItem("userId");
         await AsyncStorage.removeItem("userRole");
         await AsyncStorage.removeItem("username");
+
         dispatch({ type: "SIGN_OUT" });
       } catch (error) {
         console.log("Sign out error:", error);
@@ -381,8 +461,8 @@ export const NavigationStack = () => {
   return (
     <NavigationContainer>
       <StatusBar style="auto" />
+
       {state.isLoading ? (
-        // Loading screen while checking auth state
         <Stack.Navigator>
           <Stack.Screen
             name="Splash"
@@ -401,10 +481,8 @@ export const NavigationStack = () => {
           />
         </Stack.Navigator>
       ) : state.userToken == null ? (
-        // User is not logged in - show Auth Stack (Login/SignUp)
         <AuthStack />
       ) : (
-        // User is logged in - show App Stack (Main App)
         <AppStack />
       )}
     </NavigationContainer>
