@@ -240,7 +240,6 @@ export default function SignUpScreen({ navigation }) {
             <TextInput
               style={styles.passwordInput}
               placeholder="Password"
-              secureTextEntry={!showPassword}
               placeholderTextColor="#7b7b7b"
               value={password}
               onChangeText={setPassword}

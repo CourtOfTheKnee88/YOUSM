@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
 import { ScrollView, StyleSheet, Text, View, Pressable, ActivityIndicator, SafeAreaView } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { SERVER_URL, CURRENT_USER_ID } from "../config";
+import { SERVER_URL } from "../config";
 import { COLORS, SPACING } from "../theme";
 import { useFocusEffect } from "@react-navigation/native";
+import { useAuth } from "../navigation";
 
 export default function ProfileScreen({ navigation }) {
+  const { userId, signOut } = useAuth();
   const [user, setUser] = useState(null);
   const [joinedCommunities, setJoinedCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -13,8 +15,8 @@ export default function ProfileScreen({ navigation }) {
   const fetchProfile = async () => {
     try {
       const [userRes, commRes] = await Promise.all([
-        fetch(`${SERVER_URL}/users/${CURRENT_USER_ID}`),
-        fetch(`${SERVER_URL}/communities/user/${CURRENT_USER_ID}`)
+        fetch(`${SERVER_URL}/users/${userId}`),
+        fetch(`${SERVER_URL}/communities/user/${userId}`)
       ]);
       
       const userData = await userRes.json();
@@ -29,11 +31,25 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
+  const handleLogout = async () => {
+    await signOut();
+  };
+
   useFocusEffect(
     useCallback(() => {
       fetchProfile();
-    }, [])
+    }, [userId])
   );
+
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <Pressable onPress={handleLogout} style={styles.logoutBtn}>
+          <Ionicons name="log-out" size={24} color="#FFFFFF" />
+        </Pressable>
+      ),
+    });
+  }, [navigation]);
 
   if (loading || !user) {
     return (
@@ -299,5 +315,9 @@ const styles = StyleSheet.create({
     color: "#042752",
     fontWeight: "800",
     fontSize: 15,
+  },
+  logoutBtn: {
+    marginRight: 16,
+    padding: 8,
   },
 });
