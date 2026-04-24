@@ -149,7 +149,7 @@ function InboxStack() {
       <Stack.Screen
         name="InboxHome"
         component={InboxScreen}
-        options={{ title: "Messages", headerShown: true }}
+        options={{ title: "Messages", headerShown: false }}
       />
       <Stack.Screen
         name="Message"
