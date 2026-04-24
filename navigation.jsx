@@ -149,12 +149,15 @@ function InboxStack() {
       <Stack.Screen
         name="InboxHome"
         component={InboxScreen}
-        options={{ title: "Messages", headerShown: false }}
+        options={{ title: "Messages", headerShown: false }} //hides white bar
       />
       <Stack.Screen
         name="Message"
         component={MessageScreen}
-        options={({ route }) => ({ title: route.params?.threadName || "Chat" })}
+        options={({ route }) => ({ 
+          title: route.params?.threadName || "Chat",
+          headerShown: false  //hides white bar
+        })}
       />
     </Stack.Navigator>
   );
