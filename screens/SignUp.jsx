@@ -16,6 +16,7 @@ import { useState } from "react";
 import { useDatabase } from "../database";
 import { useAuth } from "../navigation";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SERVER_URL } from "../config";
 
 const SECURITY_QUESTIONS = [
   "What city were you born in?",
@@ -100,7 +101,7 @@ export default function SignUpScreen({ navigation }) {
         return;
       }
 
-      // Check if username already exists
+      // Check if username already exists locally
       const usernamResult = await db.getFirstAsync(
         "SELECT id FROM users WHERE username = ?",
         [username],
@@ -112,7 +113,7 @@ export default function SignUpScreen({ navigation }) {
         return;
       }
 
-      // Check if email already exists
+      // Check if email already exists locally
       const emailResult = await db.getFirstAsync(
         "SELECT id FROM users WHERE email = ?",
         [email],
@@ -124,30 +125,47 @@ export default function SignUpScreen({ navigation }) {
         return;
       }
 
-      // Insert user data into SQLite database with auto-generated ID
-      const result = await db.runAsync(
-        `INSERT INTO users (username, password, email, role, securityQuestion, securityQA) 
-         VALUES (?, ?, ?, ?, ?, ?)`,
-        [
+      // Register user on backend first
+      console.log("Registering user on backend...");
+      const backendResponse = await fetch(`${SERVER_URL}/users`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           username,
-          password,
           email,
-          selectedRole.toLowerCase(),
+          password,
+          role: selectedRole.toLowerCase(),
           securityQuestion,
           securityAnswer,
-        ],
-      );
+        }),
+      });
+
+      if (!backendResponse.ok) {
+        const errorData = await backendResponse.json();
+        Alert.alert(
+          "Error",
+          errorData.error || "Failed to create account on server",
+        );
+        setLoading(false);
+        return;
+      }
+
+      const backendUser = await backendResponse.json();
+      const backendUserId = backendUser.user.id;
+      console.log("User created on backend with ID:", backendUserId);
 
       Alert.alert("Success", "Account created successfully!");
-      // Save user data to AsyncStorage
-      const newUserId = result.lastInsertRowId;
-      await AsyncStorage.setItem("userToken", `token_${newUserId}`);
-      await AsyncStorage.setItem("userId", newUserId.toString());
+
+      // Save user data to AsyncStorage with backend-assigned ID
+      await AsyncStorage.setItem("userToken", `token_${backendUserId}`);
+      await AsyncStorage.setItem("userId", backendUserId.toString());
       await AsyncStorage.setItem("userRole", selectedRole.toLowerCase());
       await AsyncStorage.setItem("username", username);
+
       // Call signUp from auth context to automatically log in
       await signUp(username, email);
     } catch (error) {
+      console.error("Sign up error:", error);
       Alert.alert(
         "Error",
         error.message || "Sign up failed. Please try again.",
@@ -240,6 +258,7 @@ export default function SignUpScreen({ navigation }) {
             <TextInput
               style={styles.passwordInput}
               placeholder="Password"
+              secureTextEntry={!showPassword}
               placeholderTextColor="#7b7b7b"
               value={password}
               onChangeText={setPassword}

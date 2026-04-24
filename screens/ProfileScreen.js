@@ -1,5 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
-import { ScrollView, StyleSheet, Text, View, Pressable, ActivityIndicator, SafeAreaView } from "react-native";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  Pressable,
+  ActivityIndicator,
+  SafeAreaView,
+} from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { SERVER_URL } from "../config";
 import { COLORS, SPACING } from "../theme";
@@ -13,14 +21,27 @@ export default function ProfileScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async () => {
+    if (!userId) {
+      console.warn("userId is not available yet");
+      setLoading(false);
+      return;
+    }
+
     try {
+      console.log("Fetching profile for userId:", userId);
       const [userRes, commRes] = await Promise.all([
         fetch(`${SERVER_URL}/users/${userId}`),
-        fetch(`${SERVER_URL}/communities/user/${userId}`)
+        fetch(`${SERVER_URL}/communities/user/${userId}`),
       ]);
-      
+
+      console.log("User response status:", userRes.status);
+      console.log("Communities response status:", commRes.status);
+
       const userData = await userRes.json();
       const commData = await commRes.json();
+
+      console.log("User data:", userData);
+      console.log("Communities data:", commData);
 
       if (userData.user) setUser(userData.user);
       if (commData.communities) setJoinedCommunities(commData.communities);
@@ -38,7 +59,7 @@ export default function ProfileScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       fetchProfile();
-    }, [userId])
+    }, [userId]),
   );
 
   useEffect(() => {
@@ -53,7 +74,7 @@ export default function ProfileScreen({ navigation }) {
 
   if (loading || !user) {
     return (
-      <SafeAreaView style={[styles.screen, { justifyContent: 'center' }]}>
+      <SafeAreaView style={[styles.screen, { justifyContent: "center" }]}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </SafeAreaView>
     );
@@ -64,7 +85,9 @@ export default function ProfileScreen({ navigation }) {
       return (
         <InfoCard title="Academic Information">
           <Text style={styles.infoLine}>Major: {user.major || "Not set"}</Text>
-          <Text style={styles.infoLine}>Degree: {user.degree || "Not set"}</Text>
+          <Text style={styles.infoLine}>
+            Degree: {user.degree || "Not set"}
+          </Text>
           <Text style={styles.infoLine}>
             Graduation Year: {user.gradYear || "Not set"}
           </Text>
@@ -75,9 +98,15 @@ export default function ProfileScreen({ navigation }) {
     if (user.role === "Faculty") {
       return (
         <InfoCard title="Faculty Information">
-          <Text style={styles.infoLine}>Department: {user.department || "Not set"}</Text>
-          <Text style={styles.infoLine}>Degree: {user.degree || "Not set"}</Text>
-          <Text style={styles.infoLine}>Office Hours: {user.officeHours || "Not set"}</Text>
+          <Text style={styles.infoLine}>
+            Department: {user.department || "Not set"}
+          </Text>
+          <Text style={styles.infoLine}>
+            Degree: {user.degree || "Not set"}
+          </Text>
+          <Text style={styles.infoLine}>
+            Office Hours: {user.officeHours || "Not set"}
+          </Text>
         </InfoCard>
       );
     }
@@ -85,13 +114,19 @@ export default function ProfileScreen({ navigation }) {
     if (user.role === "Alumni") {
       return (
         <InfoCard title="Alumni Information">
-          <Text style={styles.infoLine}>Degree: {user.degree || "Not set"}</Text>
+          <Text style={styles.infoLine}>
+            Degree: {user.degree || "Not set"}
+          </Text>
           <Text style={styles.infoLine}>Major: {user.major || "Not set"}</Text>
           <Text style={styles.infoLine}>
             Alumni Class Year: {user.alumniClassYear || "Not set"}
           </Text>
-          <Text style={styles.infoLine}>Employer: {user.employer || "Not set"}</Text>
-          <Text style={styles.infoLine}>Job Title: {user.jobTitle || "Not set"}</Text>
+          <Text style={styles.infoLine}>
+            Employer: {user.employer || "Not set"}
+          </Text>
+          <Text style={styles.infoLine}>
+            Job Title: {user.jobTitle || "Not set"}
+          </Text>
         </InfoCard>
       );
     }
@@ -102,8 +137,12 @@ export default function ProfileScreen({ navigation }) {
           <Text style={styles.infoLine}>
             Moderation Level: {user.moderationLevel || "Not set"}
           </Text>
-          <Text style={styles.infoLine}>Department: {user.department || "Not set"}</Text>
-          <Text style={styles.infoLine}>Office Hours: {user.officeHours || "Not set"}</Text>
+          <Text style={styles.infoLine}>
+            Department: {user.department || "Not set"}
+          </Text>
+          <Text style={styles.infoLine}>
+            Office Hours: {user.officeHours || "Not set"}
+          </Text>
         </InfoCard>
       );
     }
@@ -112,28 +151,42 @@ export default function ProfileScreen({ navigation }) {
   };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.container}
+      showsVerticalScrollIndicator={false}
+    >
       <View style={styles.heroCard}>
-         <View style={styles.avatarCircle}>
-            <Text style={styles.avatarInitial}>{user.displayName?.charAt(0) || "U"}</Text>
-         </View>
-         <Text style={styles.profileName}>{user.displayName}</Text>
-         <Text style={styles.profileUsername}>@{user.username} • {user.role}</Text>
-         <Text style={styles.bioText}>{user.bio || "No bio yet."}</Text>
-         <Pressable style={styles.editBtn} onPress={() => navigation.navigate("EditProfile", { user })}>
-            <Text style={styles.editBtnText}>Edit Profile</Text>
-         </Pressable>
+        <View style={styles.avatarCircle}>
+          <Text style={styles.avatarInitial}>
+            {user.displayName?.charAt(0) || "U"}
+          </Text>
+        </View>
+        <Text style={styles.profileName}>{user.displayName}</Text>
+        <Text style={styles.profileUsername}>
+          @{user.username} • {user.role}
+        </Text>
+        <Text style={styles.bioText}>{user.bio || "No bio yet."}</Text>
+        <Pressable
+          style={styles.editBtn}
+          onPress={() => navigation.navigate("EditProfile", { user })}
+        >
+          <Text style={styles.editBtnText}>Edit Profile</Text>
+        </Pressable>
       </View>
 
       {renderRoleSection()}
 
       <InfoCard title="Interests">
         <View style={styles.tagWrap}>
-          {(user.interests || "").split(',').filter(Boolean).map((interest) => (
-            <View key={interest} style={styles.tag}>
-              <Text style={styles.tagText}>{interest}</Text>
-            </View>
-          ))}
+          {(user.interests || "")
+            .split(",")
+            .filter(Boolean)
+            .map((interest) => (
+              <View key={interest} style={styles.tag}>
+                <Text style={styles.tagText}>{interest}</Text>
+              </View>
+            ))}
         </View>
       </InfoCard>
 
@@ -143,13 +196,13 @@ export default function ProfileScreen({ navigation }) {
             key={community.id}
             style={styles.communityItem}
             onPress={() =>
-              navigation.navigate("CommunityDetail", { 
-                communityId: community.id, 
+              navigation.navigate("CommunityDetail", {
+                communityId: community.id,
                 name: community.name,
                 description: community.description,
                 type: community.type,
                 category: community.category,
-                memberCount: community.memberCount
+                memberCount: community.memberCount,
               })
             }
           >
@@ -200,7 +253,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
     borderRadius: 24,
     padding: 22,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 16,
     borderWidth: 2,
     borderColor: COLORS.secondary,
@@ -210,13 +263,43 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
   },
-  avatarCircle: { width: 80, height: 80, borderRadius: 40, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  avatarInitial: { color: "#FFF", fontSize: 32, fontWeight: '800' },
-  profileName: { fontSize: 24, fontWeight: '800', color: COLORS.primary, marginBottom: 4 },
-  profileUsername: { color: COLORS.secondary, fontWeight: '700', marginBottom: 12 },
-  bioText: { textAlign: 'center', color: COLORS.text, fontSize: 15, lineHeight: 20, marginBottom: 16 },
-  editBtn: { backgroundColor: COLORS.background, paddingHorizontal: 20, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: COLORS.primary },
-  editBtnText: { color: COLORS.primary, fontWeight: '700' },
+  avatarCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  avatarInitial: { color: "#FFF", fontSize: 32, fontWeight: "800" },
+  profileName: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: COLORS.primary,
+    marginBottom: 4,
+  },
+  profileUsername: {
+    color: COLORS.secondary,
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+  bioText: {
+    textAlign: "center",
+    color: COLORS.text,
+    fontSize: 15,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  editBtn: {
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  editBtnText: { color: COLORS.primary, fontWeight: "700" },
   infoCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 20,
@@ -225,7 +308,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  infoCardTitle: { fontSize: 17, fontWeight: '800', color: COLORS.primary, marginBottom: 12 },
+  infoCardTitle: {
+    fontSize: 17,
+    fontWeight: "800",
+    color: COLORS.primary,
+    marginBottom: 12,
+  },
   infoLine: {
     fontSize: 15,
     color: "#000000",
