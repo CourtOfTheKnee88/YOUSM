@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
-import { StyleSheet, Text, View, Pressable, FlatList, SafeAreaView, Modal, ScrollView, TextInput, Alert } from "react-native";
+import { StyleSheet, Text, View, Pressable, FlatList, Modal, ScrollView, TextInput, Alert } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { SERVER_URL } from '../config';
 import { COLORS, SPACING } from '../theme';
 
-const CURRENT_USER = "james"; // Changed to match the ID 1 used in other screens
 const MOCK_CONTACTS = ["James", "Courtney", "Esther", "JohnDoe"];
 
 export default function InboxScreen({ navigation }) {
   const [inboxChats, setInboxChats] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
   
   // Modals
   const [modalVisible, setModalVisible] = useState(false);
@@ -23,25 +25,47 @@ export default function InboxScreen({ navigation }) {
   const [blockedUsers, setBlockedUsers] = useState([]);
 
   const fetchInbox = async () => {
+    if (!currentUser) return;
     try {
-      const res = await fetch(`${SERVER_URL}/threads/inbox/${CURRENT_USER}`);
+      const res = await fetch(`${SERVER_URL}/threads/inbox/${currentUser}`);
       const data = await res.json();
       if (data.inbox) setInboxChats(data.inbox);
     } catch (error) { console.error("Failed to load inbox:", error); }
   };
 
   const fetchBlockedUsers = async () => {
+    if (!currentUser) return;
     try {
-      const res = await fetch(`${SERVER_URL}/threads/blocks/${CURRENT_USER}`);
+      const res = await fetch(`${SERVER_URL}/threads/blocks/${currentUser}`);
       const data = await res.json();
       if (data.blockedUsers) setBlockedUsers(data.blockedUsers);
     } catch (error) { console.error("Failed to load blocks:", error); }
   };
 
   useEffect(() => {
+    let isMounted = true;
+
+    const loadCurrentUser = async () => {
+      try {
+        const username = await AsyncStorage.getItem("username");
+        if (isMounted) setCurrentUser(username || null);
+      } catch (error) {
+        console.error("Failed to load current user:", error);
+      }
+    };
+
+    loadCurrentUser();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser) return;
     const unsubscribe = navigation.addListener('focus', fetchInbox);
     return unsubscribe;
-  }, [navigation]);
+  }, [navigation, currentUser]);
 
   // 🛑 UPDATED: Group Menu now includes "Leave Group"
   const showChatOptions = (item) => {
@@ -80,7 +104,7 @@ export default function InboxScreen({ navigation }) {
         style: "destructive", 
         onPress: async () => {
           try {
-            const res = await fetch(`${SERVER_URL}/threads/${threadId}/participants/${CURRENT_USER}`, { method: 'DELETE' });
+            const res = await fetch(`${SERVER_URL}/threads/${threadId}/participants/${currentUser}`, { method: 'DELETE' });
             if (res.ok) fetchInbox();
           } catch (error) { console.error("Leave failed", error); }
         } 
@@ -98,7 +122,7 @@ export default function InboxScreen({ navigation }) {
           try {
             await fetch(`${SERVER_URL}/threads/block`, {
               method: 'POST', headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ blocker: CURRENT_USER, blocked: targetUser })
+              body: JSON.stringify({ blocker: currentUser, blocked: targetUser })
             });
             fetchInbox(); 
           } catch (error) { console.error("Block failed", error); }
@@ -112,7 +136,7 @@ export default function InboxScreen({ navigation }) {
     try {
       const res = await fetch(`${SERVER_URL}/threads/unblock`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ blocker: CURRENT_USER, blocked: blockedUser })
+        body: JSON.stringify({ blocker: currentUser, blocked: blockedUser })
       });
       if (res.ok) {
         fetchBlockedUsers(); // Refresh the modal list
@@ -148,14 +172,14 @@ export default function InboxScreen({ navigation }) {
   };
 
   const handleCreateChat = async () => {
-    if (selectedUsers.length === 0) return;
+    if (!currentUser || selectedUsers.length === 0) return;
     try {
       const isGroup = selectedUsers.length > 1;
       const endpoint = isGroup ? '/threads/group' : '/threads/direct';
       const res = await fetch(`${SERVER_URL}${endpoint}`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-            participantIds: isGroup ? [CURRENT_USER, ...selectedUsers] : [CURRENT_USER, selectedUsers[0]], 
+            participantIds: isGroup ? [currentUser, ...selectedUsers] : [currentUser, selectedUsers[0]], 
             name: isGroup ? groupName : null 
         })
       });
@@ -163,7 +187,7 @@ export default function InboxScreen({ navigation }) {
       if (data.thread) {
         setModalVisible(false); setSelectedUsers([]); setGroupName("");
         navigation.navigate("Message", { 
-          currentUser: CURRENT_USER, 
+          currentUser,
           targetUser: isGroup ? "group" : selectedUsers[0],
           targetDisplayName: data.thread.name || (isGroup ? "Group Chat" : selectedUsers[0]),
           threadId: data.thread.id
@@ -179,7 +203,7 @@ export default function InboxScreen({ navigation }) {
     return (
       <Pressable 
         style={styles.chatRow}
-        onPress={() => navigation.navigate("Message", { currentUser: CURRENT_USER, targetUser: item.threadType === 'group' ? 'group' : item.targetUser, targetDisplayName: safeName, threadId: item.threadId })}
+        onPress={() => navigation.navigate("Message", { currentUser, targetUser: item.threadType === 'group' ? 'group' : item.targetUser, targetDisplayName: safeName, threadId: item.threadId })}
         onLongPress={() => showChatOptions(item)}
       >
         <View style={styles.avatarPlaceholder}><Text style={styles.avatarInitial}>{displayInitial}</Text></View>
@@ -192,7 +216,8 @@ export default function InboxScreen({ navigation }) {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeAreaTop} edges={['top']}>
+      <View style={styles.container}>
       {/* Settings Modal (Blocked Users) */}
       <Modal visible={settingsModalVisible} animationType="slide" transparent={true}>
         <View style={styles.modalOverlay}>
@@ -282,13 +307,15 @@ export default function InboxScreen({ navigation }) {
       <FlatList data={inboxChats} keyExtractor={(item) => item.threadId.toString()} renderItem={renderChatItem} contentContainerStyle={styles.listContent} />
 
       <Pressable style={styles.fab} onPress={() => setModalVisible(true)}><Ionicons name="add" size={30} color="#FFF" /></Pressable>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeAreaTop: { flex: 1, backgroundColor: "#082348" },
   container: { flex: 1, backgroundColor: "#FFF" },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: 10, paddingBottom: 20, backgroundColor: "#082348" },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingTop: 16, paddingBottom: 20, backgroundColor: "#082348" },
   backButtonContainer: { width: 40, height: 40, borderRadius: 20, backgroundColor: "#0F2D59", alignItems: "center", justifyContent: "center" },
   settingsButton: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: 20, fontWeight: "bold", color: "#FFF" },
