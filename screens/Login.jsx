@@ -12,9 +12,9 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
-import { useDatabase } from "../database";
 import { useAuth } from "../navigation";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { SERVER_URL } from "../config";
 
 export default function LoginScreen({ navigation }) {
   const [username, setUsername] = useState("");
@@ -30,7 +30,6 @@ export default function LoginScreen({ navigation }) {
   const [forgotPasswordUserId, setForgotPasswordUserId] = useState(null);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
-  const db = useDatabase();
   const { signIn } = useAuth();
 
   const handleLogin = async () => {
@@ -46,32 +45,22 @@ export default function LoginScreen({ navigation }) {
 
     setLoading(true);
     try {
-      if (!db) {
-        Alert.alert("Error", "Database not initialized");
-        return;
-      }
+      const response = await fetch(`${SERVER_URL}/users/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      const result = await response.json();
 
-      // Query database for user with matching username
-      const user = await db.getFirstAsync(
-        "SELECT id, password, role FROM users WHERE username = ?",
-        [username],
-      );
-
-      if (!user) {
-        Alert.alert("Error", "Username not found");
+      if (!response.ok) {
+        Alert.alert("Error", result.error || "Login failed");
         setLoading(false);
         return;
       }
 
-      // Check if password matches
-      if (user.password !== password) {
-        Alert.alert("Error", "Incorrect password");
-        setLoading(false);
-        return;
-      }
+      const user = result.user;
 
       // Login successful
-      Alert.alert("Success", "Login successful!");
       // Save user data to AsyncStorage
       await AsyncStorage.setItem("userToken", `token_${user.id}`);
       await AsyncStorage.setItem("userId", user.id.toString());
@@ -119,24 +108,23 @@ export default function LoginScreen({ navigation }) {
     }
 
     try {
-      // Find user by username
-      const user = await db.getFirstAsync(
-        "SELECT id, securityQuestion, securityQA FROM users WHERE username = ?",
-        [forgotUsername],
+      const response = await fetch(
+        `${SERVER_URL}/users/forgot-password/${forgotUsername}`,
       );
+      const result = await response.json();
 
-      if (!user) {
-        Alert.alert("Error", "Username not found");
+      if (!response.ok) {
+        Alert.alert("Error", result.error || "Username not found");
         return;
       }
 
-      if (!user.securityQuestion) {
-        Alert.alert("Error", "No security question found for this user");
+      if (!result.securityQuestion) {
+        Alert.alert("Error", "No security question found");
         return;
       }
 
-      setSecurityQuestion(user.securityQuestion);
-      setForgotPasswordUserId(user.id);
+      setSecurityQuestion(result.securityQuestion);
+      setForgotPasswordUserId(result.userId);
       setForgotPasswordStep(2);
     } catch (error) {
       Alert.alert("Error", error.message || "Failed to find user");
@@ -150,19 +138,18 @@ export default function LoginScreen({ navigation }) {
     }
 
     try {
-      // Verify security answer
-      const user = await db.getFirstAsync(
-        "SELECT securityQA FROM users WHERE id = ?",
-        [forgotPasswordUserId],
-      );
+      const response = await fetch(`${SERVER_URL}/users/verify-security`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: forgotPasswordUserId,
+          answer: securityAnswer,
+        }),
+      });
+      const result = await response.json();
 
-      if (!user) {
-        Alert.alert("Error", "User not found");
-        return;
-      }
-
-      if (user.securityQA.toLowerCase() !== securityAnswer.toLowerCase()) {
-        Alert.alert("Error", "Incorrect security answer");
+      if (!response.ok) {
+        Alert.alert("Error", result.error || "Incorrect security answer");
         return;
       }
 
@@ -189,11 +176,12 @@ export default function LoginScreen({ navigation }) {
     }
 
     try {
-      // Update password in database
-      await db.runAsync("UPDATE users SET password = ? WHERE id = ?", [
-        newPassword,
-        forgotPasswordUserId,
-      ]);
+      const response = await fetch(`${SERVER_URL}/users/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: forgotPasswordUserId, newPassword }),
+      });
+      if (!response.ok) throw new Error("Update failed");
 
       Alert.alert("Success", "Password reset successfully! Please log in.");
       closeForgotPasswordModal();

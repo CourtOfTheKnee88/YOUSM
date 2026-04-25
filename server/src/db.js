@@ -420,17 +420,13 @@ function createUser(
 }
 
 function getUserByUsername(username) {
+  return db.prepare(`SELECT * FROM users WHERE username = ?`).get(username);
+}
+
+function updateUserPassword(userId, newPassword) {
   return db
-    .prepare(
-      `
-    SELECT id, username, displayName, bio, profileImage, createdAt,
-      (SELECT COUNT(*) FROM followers WHERE followingId = users.id) as followerCount,
-      (SELECT COUNT(*) FROM followers WHERE followerId = users.id) as followingCount
-    FROM users
-    WHERE username = ?
-  `,
-    )
-    .get(username);
+    .prepare("UPDATE users SET password = ? WHERE id = ?")
+    .run(newPassword, userId);
 }
 
 function toggleFollow(followerId, followingId) {
@@ -925,6 +921,7 @@ module.exports = {
   getUserById,
   getUserByUsername,
   createUser,
+  updateUserPassword,
   toggleFollow,
   getFollowers,
   getAllCommunities,

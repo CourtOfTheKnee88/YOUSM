@@ -13,7 +13,6 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useState } from "react";
-import { useDatabase } from "../database";
 import { useAuth } from "../navigation";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { SERVER_URL } from "../config";
@@ -43,7 +42,6 @@ export default function SignUpScreen({ navigation }) {
   const [selectedRole, setSelectedRole] = useState(ROLE_OPTIONS[0]);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const db = useDatabase();
   const { signUp } = useAuth();
 
   const validateForm = () => {
@@ -96,36 +94,9 @@ export default function SignUpScreen({ navigation }) {
 
     setLoading(true);
     try {
-      if (!db) {
-        Alert.alert("Error", "Database not initialized");
-        return;
-      }
-
-      // Check if username already exists locally
-      const usernamResult = await db.getFirstAsync(
-        "SELECT id FROM users WHERE username = ?",
-        [username],
-      );
-
-      if (usernamResult) {
-        Alert.alert("Error", "Username already exists. Please choose another.");
-        setLoading(false);
-        return;
-      }
-
-      // Check if email already exists locally
-      const emailResult = await db.getFirstAsync(
-        "SELECT id FROM users WHERE email = ?",
-        [email],
-      );
-
-      if (emailResult) {
-        Alert.alert("Error", "Email already registered. Please use another.");
-        setLoading(false);
-        return;
-      }
-
       // Register user on backend first
+      // Register user on backend.
+      // The backend db.js logic handles unique constraints for username and email.
       console.log("Registering user on backend...");
       const backendResponse = await fetch(`${SERVER_URL}/users`, {
         method: "POST",

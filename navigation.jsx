@@ -154,9 +154,9 @@ function InboxStack() {
       <Stack.Screen
         name="Message"
         component={MessageScreen}
-        options={({ route }) => ({ 
+        options={({ route }) => ({
           title: route.params?.threadName || "Chat",
-          headerShown: false  //hides white bar
+          headerShown: false, //hides white bar
         })}
       />
     </Stack.Navigator>

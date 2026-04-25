@@ -10,6 +10,7 @@ const {
   getPostsByUserId,
   updateUser,
   createUser,
+  updateUserPassword,
 } = require("../db");
 
 // GET all users
@@ -21,6 +22,65 @@ router.get("/", (req, res) => {
   } catch (error) {
     console.error("Error fetching users:", error);
     res.status(500).json({ error: "Failed to fetch users" });
+  }
+});
+
+// POST login
+router.post("/login", (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const user = getUserByUsername(username);
+
+    if (!user || user.password !== password) {
+      return res.status(401).json({ error: "Invalid username or password" });
+    }
+
+    // Remove sensitive data before sending to client
+    const { password: _, securityQA: __, ...safeUser } = user;
+    res.json({ user: safeUser });
+  } catch (error) {
+    res.status(500).json({ error: "Login failed" });
+  }
+});
+
+// GET security question for password reset
+router.get("/forgot-password/:username", (req, res) => {
+  try {
+    const user = getUserByUsername(req.params.username);
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    res.json({
+      userId: user.id,
+      securityQuestion: user.securityQuestion,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// POST verify security answer
+router.post("/verify-security", (req, res) => {
+  try {
+    const { userId, answer } = req.body;
+    const user = getUserById(userId);
+
+    if (user && user.securityQA.toLowerCase() === answer.toLowerCase()) {
+      return res.json({ success: true });
+    }
+    res.status(401).json({ error: "Incorrect answer" });
+  } catch (error) {
+    res.status(500).json({ error: "Verification failed" });
+  }
+});
+
+// POST reset password
+router.post("/reset-password", (req, res) => {
+  try {
+    const { userId, newPassword } = req.body;
+    updateUserPassword(userId, newPassword);
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to reset password" });
   }
 });
 
