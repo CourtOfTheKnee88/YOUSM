@@ -68,6 +68,7 @@ export default function InboxScreen({ navigation }) {
 
   useEffect(() => {
     if (!currentUser) return;
+    fetchInbox(); // Explicitly call on initial mount/user load
     const unsubscribe = navigation.addListener('focus', fetchInbox);
     return unsubscribe;
   }, [navigation, currentUser]);
@@ -299,7 +300,7 @@ export default function InboxScreen({ navigation }) {
       </Modal>
 
       <View style={styles.header}>
-        <Pressable style={styles.backButtonContainer} onPress={() => navigation.goBack()}><Ionicons name="chevron-back" size={24} color="#FFF" /></Pressable>
+        <View style={{ width: 40 }} />
         <Text style={styles.headerTitle}>Messages</Text>
         
         {/* 🛑 NEW: Settings Icon in the Header */}

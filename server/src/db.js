@@ -1203,7 +1203,16 @@ function getUserInbox(userId) {
           WHERE tp.thread_id = t.id AND tp.user_id != ?
         )
       END as targetUser,
-      (SELECT content FROM messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) as lastMessage,
+      (
+        SELECT 
+          CASE 
+            WHEN (content IS NOT NULL AND content != '') THEN content
+            WHEN media_type = 'image' THEN '📷 Photo'
+            WHEN media_type = 'video' THEN '🎥 Video'
+            ELSE NULL
+          END
+        FROM messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1
+      ) as lastMessage,
       (SELECT created_at FROM messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) as lastMessageAt
     FROM threads t
     WHERE t.id IN (SELECT thread_id FROM thread_participants WHERE user_id = ?)

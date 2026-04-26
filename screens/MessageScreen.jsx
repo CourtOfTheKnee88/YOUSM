@@ -211,7 +211,9 @@ export default function MessageScreen({ route, navigation }) {
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
         <View style={styles.headerContainer}>
-          <Pressable style={styles.iconButton} onPress={() => navigation.goBack()}><Ionicons name="chevron-back" size={24} color="white" /></Pressable>
+          <Pressable style={styles.iconButton} onPress={() => navigation.navigate("InboxHome")}>
+            <Ionicons name="chevron-back" size={24} color="white" />
+          </Pressable>
           <Text style={styles.headerTitle} numberOfLines={1}>{chatTitle}</Text>
           <Pressable style={styles.iconButton} onPress={openSettings}><Ionicons name="settings-outline" size={24} color="white" /></Pressable>
         </View>
