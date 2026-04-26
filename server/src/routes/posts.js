@@ -176,18 +176,26 @@ router.post("/:postId/interact", (req, res) => {
 router.delete("/:postId", (req, res) => {
   try {
     const postId = parseInt(req.params.postId);
-
-    const adminUserId = req.body?.adminUserId
-      ? parseInt(req.body.adminUserId)
-      : req.query.adminUserId
-        ? parseInt(req.query.adminUserId)
-        : null;
+    const { userId, adminUserId: adminIdBody } = req.body;
+    
+    const adminUserId = adminIdBody 
+      ? parseInt(adminIdBody) 
+      : (req.query.adminUserId ? parseInt(req.query.adminUserId) : null);
 
     if (adminUserId) {
       deleteCommunityPost(postId, adminUserId);
-    } else {
-      deletePost(postId);
+      return res.json({ success: true });
     }
+
+    // Ownership check for standard post deletion
+    const postData = getPostById(postId);
+    if (!postData) return res.status(404).json({ error: "Post not found" });
+
+    if (postData.post.authorId !== parseInt(userId)) {
+      return res.status(403).json({ error: "Unauthorized to delete this post" });
+    }
+
+    deletePost(postId);
 
     res.json({ success: true });
   } catch (error) {

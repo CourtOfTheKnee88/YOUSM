@@ -203,55 +203,21 @@ function initializeDatabase() {
   `);
 
   const testUsers = [
-<<<<<<< HEAD
     { username: "james", displayName: "James Tedder", email: "james.tedder@maine.edu", password: "password123", role: "Student" },
     { username: "gage", displayName: "Gage", email: "gage@maine.edu", password: "password123", role: "Student" },
     { username: "courtney", displayName: "Courtney", email: "courtney@maine.edu", password: "password123", role: "Student" },
     { username: "esther", displayName: "Esther Greene", email: "esther.greene@maine.edu", password: "password123", role: "Student" },
     { username: "janedoe", displayName: "Jane Doe", email: "jane.doe@maine.edu", password: "password123", role: "Faculty" },
     { username: "bobsmith", displayName: "Bob Smith", email: "bob.smith@alumni.maine.edu", password: "password123", role: "Alumni" },
-=======
-    {
-      username: "james",
-      displayName: "James",
-      email: "james@yousm.local",
-      password: "password",
-    },
-    {
-      username: "gage",
-      displayName: "Gage",
-      email: "gage@yousm.local",
-      password: "password",
-    },
-    {
-      username: "courtney",
-      displayName: "Courtney",
-      email: "courtney@yousm.local",
-      password: "password",
-    },
-    {
-      username: "esther",
-      displayName: "Esther",
-      email: "esther@yousm.local",
-      password: "password",
-    },
->>>>>>> origin/main
   ];
 
   testUsers.forEach((user) => {
     try {
       db.prepare(
         `
-<<<<<<< HEAD
         INSERT INTO users (username, displayName, email, password, role) VALUES (?, ?, ?, ?, ?)
       `,
       ).run(user.username, user.displayName, user.email, user.password, user.role);
-=======
-        INSERT INTO users (username, displayName, email, password)
-        VALUES (?, ?, ?, ?)
-      `,
-      ).run(user.username, user.displayName, user.email, user.password);
->>>>>>> origin/main
     } catch (e) {
       // User already exists
     }
@@ -273,12 +239,6 @@ function initializeDatabase() {
         name: "Software Engineering",
         type: "Course",
         category: "Class",
-        description: "A course community for project collaboration.",
-      },
-      {
-        name: "Campus Hiking Club",
-        type: "Club",
-        category: "Social",
         description: "Explore the outdoors with fellow students.",
       },
       {
