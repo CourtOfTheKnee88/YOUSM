@@ -9,6 +9,9 @@ import EditProfileScreen from "./screens/EditProfileScreen.js";
 import CommunitiesScreen from "./screens/CommunitiesScreen.jsx";
 import CommunityDetailScreen from "./screens/CommunityDetailScreen.jsx";
 import CreateCommunityScreen from "./screens/CreateCommunityScreen.jsx";
+import CommunityFeedScreen from "./screens/CommunityFeedScreen.jsx";
+import CreateCommunityPostScreen from "./screens/CreateCommunityPostScreen.jsx";
+import CommunityAdminScreen from "./screens/CommunityAdminScreen.jsx";
 import SignUpScreen from "./screens/SignUp";
 import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
@@ -26,15 +29,13 @@ import {
 import { View, Text } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const Stack = createNativeStackNavigator(); // Used for nested stacks and auth
+const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-// Auth Context
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
-// Dashboard Stack
 function HomeStack() {
   return (
     <Stack.Navigator
@@ -55,7 +56,6 @@ function HomeStack() {
   );
 }
 
-// Community Stack
 function CommunityStack() {
   return (
     <Stack.Navigator
@@ -69,11 +69,44 @@ function CommunityStack() {
         component={CommunitiesScreen}
         options={{ title: "Communities" }}
       />
+
       <Stack.Screen
         name="CommunityDetail"
         component={CommunityDetailScreen}
         options={({ route }) => ({ title: route.params?.name || "Community" })}
       />
+
+      <Stack.Screen
+        name="CommunityFeed"
+        component={CommunityFeedScreen}
+        options={({ route }) => ({
+          title: route.params?.name
+            ? `${route.params.name} Feed`
+            : "Community Feed",
+        })}
+      />
+
+      <Stack.Screen
+        name="CreateCommunityPost"
+        component={CreateCommunityPostScreen}
+        options={({ route }) => ({
+          title:
+            route.params?.postType === "announcement"
+              ? "Create Announcement"
+              : "Create Community Post",
+        })}
+      />
+
+      <Stack.Screen
+        name="CommunityAdmin"
+        component={CommunityAdminScreen}
+        options={({ route }) => ({
+          title: route.params?.name
+            ? `${route.params.name} Admin`
+            : "Community Admin",
+        })}
+      />
+
       <Stack.Screen
         name="CreateCommunity"
         component={CreateCommunityScreen}
@@ -83,7 +116,6 @@ function CommunityStack() {
   );
 }
 
-// Profile Stack
 function ProfileStack() {
   return (
     <Stack.Navigator
@@ -97,16 +129,50 @@ function ProfileStack() {
         component={ProfileScreen}
         options={{ title: "My Profile" }}
       />
+
       <Stack.Screen
         name="EditProfile"
         component={EditProfileScreen}
         options={{ title: "Edit Profile" }}
       />
+
       <Stack.Screen
         name="CommunityDetail"
         component={CommunityDetailScreen}
         options={({ route }) => ({ title: route.params?.name || "Community" })}
       />
+
+      <Stack.Screen
+        name="CommunityFeed"
+        component={CommunityFeedScreen}
+        options={({ route }) => ({
+          title: route.params?.name
+            ? `${route.params.name} Feed`
+            : "Community Feed",
+        })}
+      />
+
+      <Stack.Screen
+        name="CreateCommunityPost"
+        component={CreateCommunityPostScreen}
+        options={({ route }) => ({
+          title:
+            route.params?.postType === "announcement"
+              ? "Create Announcement"
+              : "Create Community Post",
+        })}
+      />
+
+      <Stack.Screen
+        name="CommunityAdmin"
+        component={CommunityAdminScreen}
+        options={({ route }) => ({
+          title: route.params?.name
+            ? `${route.params.name} Admin`
+            : "Community Admin",
+        })}
+      />
+
       <Stack.Screen
         name="Communities"
         component={CommunityStack}
@@ -116,7 +182,6 @@ function ProfileStack() {
   );
 }
 
-// Home Stack
 function FeedStack() {
   return (
     <Stack.Navigator>
@@ -129,7 +194,6 @@ function FeedStack() {
   );
 }
 
-// Post Stack
 function PostStack() {
   return (
     <Stack.Navigator>
@@ -142,28 +206,27 @@ function PostStack() {
   );
 }
 
-// Messaging Stack
 function InboxStack() {
   return (
     <Stack.Navigator>
       <Stack.Screen
         name="InboxHome"
         component={InboxScreen}
-        options={{ title: "Messages", headerShown: false }} //hides white bar
+        options={{ title: "Messages", headerShown: false }}
       />
+
       <Stack.Screen
         name="Message"
         component={MessageScreen}
         options={({ route }) => ({
           title: route.params?.threadName || "Chat",
-          headerShown: false, //hides white bar
+          headerShown: false,
         })}
       />
     </Stack.Navigator>
   );
 }
 
-// Auth Stack (Login & SignUp)
 function AuthStack() {
   return (
     <Stack.Navigator
@@ -178,7 +241,6 @@ function AuthStack() {
   );
 }
 
-// Main App Stack (Tab Navigator)
 function AppStack() {
   return (
     <Tab.Navigator
@@ -218,26 +280,31 @@ function AppStack() {
         component={HomeStack}
         options={{ title: "Home" }}
       />
+
       <Tab.Screen
         name="Feed"
         component={FeedStack}
         options={{ title: "Feed" }}
       />
+
       <Tab.Screen
         name="Post"
         component={PostStack}
         options={{ title: "Post" }}
       />
+
       <Tab.Screen
         name="Communities"
         component={CommunityStack}
         options={{ title: "Clubs" }}
       />
+
       <Tab.Screen
         name="Profile"
         component={ProfileStack}
         options={{ title: "Profile" }}
       />
+
       <Tab.Screen
         name="Inbox"
         component={InboxStack}
@@ -247,7 +314,6 @@ function AppStack() {
   );
 }
 
-// Reducer for auth state
 const authReducer = (state, action) => {
   switch (action.type) {
     case "RESTORE_TOKEN":
@@ -258,6 +324,7 @@ const authReducer = (state, action) => {
         userRole: action.userRole,
         isLoading: false,
       };
+
     case "SIGN_IN":
       return {
         ...state,
@@ -265,7 +332,9 @@ const authReducer = (state, action) => {
         userToken: action.token,
         userId: action.userId,
         userRole: action.userRole,
+        isLoading: false,
       };
+
     case "SIGN_OUT":
       return {
         ...state,
@@ -273,18 +342,20 @@ const authReducer = (state, action) => {
         userToken: null,
         userId: null,
         userRole: null,
+        isLoading: false,
       };
+
     case "REST":
       return {
         ...state,
         isLoading: false,
       };
+
     default:
       return state;
   }
 };
 
-// Auth Provider Component
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, {
     isLoading: true,
@@ -297,7 +368,6 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const bootstrapAsync = async () => {
       try {
-        // Try to restore token from storage
         const token = await AsyncStorage.getItem("userToken");
         const userId = await AsyncStorage.getItem("userId");
         const userRole = await AsyncStorage.getItem("userRole");
@@ -324,37 +394,78 @@ export const AuthProvider = ({ children }) => {
   const authContext = {
     signIn: async (username, password) => {
       try {
-        const token = await AsyncStorage.getItem("userToken");
-        const userId = await AsyncStorage.getItem("userId");
-        const userRole = await AsyncStorage.getItem("userRole");
+        const response = await fetch(`${require("./config").SERVER_URL}/users/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Login failed");
+        }
+
+        const token = `token_${data.user.id}`;
+
+        await AsyncStorage.setItem("userToken", token);
+        await AsyncStorage.setItem("userId", data.user.id.toString());
+        await AsyncStorage.setItem("userRole", data.user.role);
+        await AsyncStorage.setItem("username", data.user.username);
+
         dispatch({
           type: "SIGN_IN",
           token,
-          userId,
-          userRole,
+          userId: data.user.id.toString(),
+          userRole: data.user.role,
         });
+
         return true;
       } catch (error) {
         console.log("Sign in error:", error);
-        return false;
+        throw error;
       }
     },
 
-    signUp: async (username, email) => {
+    signUp: async (username, email, password, role, securityQuestion, securityAnswer) => {
       try {
-        const token = await AsyncStorage.getItem("userToken");
-        const userId = await AsyncStorage.getItem("userId");
-        const userRole = await AsyncStorage.getItem("userRole");
+        const response = await fetch(`${require("./config").SERVER_URL}/users`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username,
+            email,
+            password,
+            role,
+            securityQuestion,
+            securityAnswer,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Sign up failed");
+        }
+
+        const token = `token_${data.user.id}`;
+
+        await AsyncStorage.setItem("userToken", token);
+        await AsyncStorage.setItem("userId", data.user.id.toString());
+        await AsyncStorage.setItem("userRole", data.user.role);
+        await AsyncStorage.setItem("username", data.user.username);
+
         dispatch({
           type: "SIGN_IN",
           token,
-          userId,
-          userRole,
+          userId: data.user.id.toString(),
+          userRole: data.user.role,
         });
+
         return true;
       } catch (error) {
         console.log("Sign up error:", error);
-        return false;
+        throw error;
       }
     },
 
@@ -364,6 +475,7 @@ export const AuthProvider = ({ children }) => {
         await AsyncStorage.removeItem("userId");
         await AsyncStorage.removeItem("userRole");
         await AsyncStorage.removeItem("username");
+
         dispatch({ type: "SIGN_OUT" });
       } catch (error) {
         console.log("Sign out error:", error);
@@ -384,8 +496,8 @@ export const NavigationStack = () => {
   return (
     <NavigationContainer>
       <StatusBar style="auto" />
+
       {state.isLoading ? (
-        // Loading screen while checking auth state
         <Stack.Navigator>
           <Stack.Screen
             name="Splash"
@@ -404,10 +516,8 @@ export const NavigationStack = () => {
           />
         </Stack.Navigator>
       ) : state.userToken == null ? (
-        // User is not logged in - show Auth Stack (Login/SignUp)
         <AuthStack />
       ) : (
-        // User is logged in - show App Stack (Main App)
         <AppStack />
       )}
     </NavigationContainer>

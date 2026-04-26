@@ -11,14 +11,21 @@ function ensureDirectory(dirPath) {
   }
 }
 
-// Initialize tables
+function addColumnIfMissing(db, tableName, columnName, columnDefinition) {
+  const columns = db.prepare(`PRAGMA table_info(${tableName})`).all();
+  const exists = columns.some((column) => column.name === columnName);
+
+  if (!exists) {
+    db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefinition}`);
+  }
+}
+
 function initializeDatabase() {
   ensureDirectory(dataDir);
   const db = new Database(dbPath);
   db.pragma("foreign_keys = ON");
   db.pragma("journal_mode = WAL");
 
-  // Users table
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,7 +52,6 @@ function initializeDatabase() {
     )
   `);
 
-  // Followers relationship
   db.exec(`
     CREATE TABLE IF NOT EXISTS followers (
       id INTEGER PRIMARY KEY,
@@ -58,7 +64,6 @@ function initializeDatabase() {
     )
   `);
 
-  // Migration: Add missing columns to users table if they don't exist
   try {
     const columns = db.pragma("table_info(users)");
     const columnNames = columns.map((col) => col.name);
@@ -85,7 +90,6 @@ function initializeDatabase() {
     console.log("Migration check error:", e.message);
   }
 
-  // Posts table
   db.exec(`
     CREATE TABLE IF NOT EXISTS posts (
       id INTEGER PRIMARY KEY,
@@ -100,7 +104,9 @@ function initializeDatabase() {
     )
   `);
 
-  // Likes/Interactions table
+  addColumnIfMissing(db, "posts", "communityId", "INTEGER");
+  addColumnIfMissing(db, "posts", "postType", "TEXT DEFAULT 'post'");
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS interactions (
       id INTEGER PRIMARY KEY,
@@ -114,7 +120,6 @@ function initializeDatabase() {
     )
   `);
 
-  // Communities table
   db.exec(`
     CREATE TABLE IF NOT EXISTS communities (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -127,7 +132,6 @@ function initializeDatabase() {
     )
   `);
 
-  // Community membership
   db.exec(`
     CREATE TABLE IF NOT EXISTS community_members (
       communityId INTEGER NOT NULL,
@@ -140,7 +144,21 @@ function initializeDatabase() {
     )
   `);
 
-  // Messaging Tables
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS community_bans (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      communityId INTEGER NOT NULL,
+      userId INTEGER NOT NULL,
+      bannedBy INTEGER NOT NULL,
+      reason TEXT,
+      bannedUntil DATETIME NOT NULL,
+      createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (communityId) REFERENCES communities(id) ON DELETE CASCADE,
+      FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (bannedBy) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS threads (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -179,32 +197,55 @@ function initializeDatabase() {
 
     CREATE INDEX IF NOT EXISTS idx_thread_participants_user_id ON thread_participants(user_id);
     CREATE INDEX IF NOT EXISTS idx_messages_thread_id_id ON messages(thread_id, id);
+    CREATE INDEX IF NOT EXISTS idx_posts_community_id ON posts(communityId);
+    CREATE INDEX IF NOT EXISTS idx_posts_post_type ON posts(postType);
+    CREATE INDEX IF NOT EXISTS idx_community_bans_lookup ON community_bans(communityId, userId, bannedUntil);
   `);
 
-  // Insert test users if they don't exist
   const testUsers = [
-    { username: "james", displayName: "James" },
-    { username: "gage", displayName: "Gage" },
-    { username: "courtney", displayName: "Courtney" },
-    { username: "esther", displayName: "Esther" },
+    {
+      username: "james",
+      displayName: "James",
+      email: "james@yousm.local",
+      password: "password",
+    },
+    {
+      username: "gage",
+      displayName: "Gage",
+      email: "gage@yousm.local",
+      password: "password",
+    },
+    {
+      username: "courtney",
+      displayName: "Courtney",
+      email: "courtney@yousm.local",
+      password: "password",
+    },
+    {
+      username: "esther",
+      displayName: "Esther",
+      email: "esther@yousm.local",
+      password: "password",
+    },
   ];
 
   testUsers.forEach((user) => {
     try {
       db.prepare(
         `
-        INSERT INTO users (username, displayName) VALUES (?, ?)
+        INSERT INTO users (username, displayName, email, password)
+        VALUES (?, ?, ?, ?)
       `,
-      ).run(user.username, user.displayName);
+      ).run(user.username, user.displayName, user.email, user.password);
     } catch (e) {
       // User already exists
     }
   });
 
-  // Insert initial communities if none exist
   const commCount = db
     .prepare("SELECT COUNT(*) as count FROM communities")
     .get().count;
+
   if (commCount === 0) {
     const initialCommunities = [
       {
@@ -233,9 +274,11 @@ function initializeDatabase() {
         description: "Strategic matches and tournaments for all levels.",
       },
     ];
+
     const insert = db.prepare(
       "INSERT INTO communities (name, type, category, description) VALUES (?, ?, ?, ?)",
     );
+
     initialCommunities.forEach((c) => {
       insert.run(c.name, c.type, c.category, c.description);
     });
@@ -246,16 +289,13 @@ function initializeDatabase() {
 
 const db = initializeDatabase();
 
-// ==========================================
-// Helper Functions
-// ==========================================
-
 function normalizeUserIds(input) {
   const userIds = Array.isArray(input) ? input : [];
   const filtered = userIds
     .map((userId) => String(userId).trim())
     .filter(Boolean);
   const unique = [...new Set(filtered)];
+
   if (unique.length !== 2) {
     const error = new Error(
       "A direct thread requires exactly two unique participant IDs.",
@@ -263,11 +303,13 @@ function normalizeUserIds(input) {
     error.statusCode = 400;
     throw error;
   }
+
   return unique.sort();
 }
 
 function serializeMessage(message) {
   if (!message) return null;
+
   return {
     id: message.id,
     threadId: message.thread_id,
@@ -281,12 +323,14 @@ function serializeMessage(message) {
 
 function serializeThread(thread) {
   if (!thread) return null;
+
   const participants = db
     .prepare(
       `SELECT user_id FROM thread_participants WHERE thread_id = ? ORDER BY user_id ASC`,
     )
     .all(thread.id)
     .map((row) => row.user_id);
+
   return {
     id: thread.id,
     threadType: thread.thread_type,
@@ -300,25 +344,33 @@ function serializeThread(thread) {
 function getOrCreateDirectThread(userIds) {
   const [firstUserId, secondUserId] = normalizeUserIds(userIds);
   const directKey = `${firstUserId}:${secondUserId}`;
+
   const existingThread = db
     .prepare(`SELECT * FROM threads WHERE direct_key = ?`)
     .get(directKey);
+
   if (existingThread) return serializeThread(existingThread);
+
   const transaction = db.transaction(() => {
     const result = db
       .prepare(
         `INSERT INTO threads (thread_type, direct_key) VALUES ('direct', ?)`,
       )
       .run(directKey);
+
     const threadId = result.lastInsertRowid;
+
     db.prepare(
       `INSERT INTO thread_participants (thread_id, user_id) VALUES (?, ?)`,
     ).run(threadId, firstUserId);
+
     db.prepare(
       `INSERT INTO thread_participants (thread_id, user_id) VALUES (?, ?)`,
     ).run(threadId, secondUserId);
+
     return threadId;
   });
+
   return serializeThread(
     db.prepare(`SELECT * FROM threads WHERE id = ?`).get(transaction()),
   );
@@ -342,7 +394,7 @@ function getUserById(userId) {
   return db
     .prepare(
       `
-    SELECT id, username, displayName, bio, profileImage, role, pronouns, major, gradYear, degree, department, officeHours, employer, jobTitle, moderationLevel, interests, createdAt,
+    SELECT id, username, displayName, bio, profileImage, role, pronouns, major, gradYear, degree, department, officeHours, employer, jobTitle, moderationLevel, interests, createdAt, securityQuestion, securityQA,
       (SELECT COUNT(*) FROM followers WHERE followingId = ?) as followerCount,
       (SELECT COUNT(*) FROM followers WHERE followerId = ?) as followingCount
     FROM users
@@ -368,6 +420,7 @@ function updateUser(userId, data) {
     interests,
     role,
   } = data;
+
   db.prepare(
     `
     UPDATE users SET 
@@ -392,6 +445,7 @@ function updateUser(userId, data) {
     role,
     userId,
   );
+
   return getUserById(userId);
 }
 
@@ -407,6 +461,7 @@ function createUser(
     INSERT INTO users (username, email, password, role, securityQuestion, securityQA, displayName)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
+
   const result = stmt.run(
     username,
     email,
@@ -416,6 +471,7 @@ function createUser(
     securityAnswer,
     username,
   );
+
   return getUserById(result.lastInsertRowid);
 }
 
@@ -441,12 +497,13 @@ function toggleFollow(followerId, followingId) {
   if (existing) {
     db.prepare(`DELETE FROM followers WHERE id = ?`).run(existing.id);
     return { following: false };
-  } else {
-    db.prepare(
-      `INSERT INTO followers (followerId, followingId) VALUES (?, ?)`,
-    ).run(followerId, followingId);
-    return { following: true };
   }
+
+  db.prepare(
+    `INSERT INTO followers (followerId, followingId) VALUES (?, ?)`,
+  ).run(followerId, followingId);
+
+  return { following: true };
 }
 
 function getFollowers(userId) {
@@ -484,21 +541,27 @@ function createGroupThread(userIds, groupName = null) {
   const uniqueUsers = [
     ...new Set(userIds.map((id) => String(id).trim()).filter(Boolean)),
   ];
-  if (uniqueUsers.length < 2)
+
+  if (uniqueUsers.length < 2) {
     throw new Error("Group thread needs at least 2 participants.");
+  }
 
   const transaction = db.transaction(() => {
     const result = db
       .prepare(`INSERT INTO threads (thread_type, name) VALUES ('group', ?)`)
       .run(groupName);
+
     const threadId = result.lastInsertRowid;
+
     for (const userId of uniqueUsers) {
       db.prepare(
         `INSERT INTO thread_participants (thread_id, user_id) VALUES (?, ?)`,
       ).run(threadId, userId);
     }
+
     return threadId;
   });
+
   return getThreadById(transaction());
 }
 
@@ -510,8 +573,10 @@ function insertMessage(
   mediaType = null,
 ) {
   const trimmedContent = String(content ?? "").trim();
-  if (!trimmedContent && !mediaUrl)
+
+  if (!trimmedContent && !mediaUrl) {
     throw new Error("Message must contain text or media.");
+  }
 
   if (isBlockedByAny(senderId, threadId)) {
     throw new Error(
@@ -530,6 +595,7 @@ function insertMessage(
       mediaUrl,
       mediaType,
     );
+
   return serializeMessage(
     db
       .prepare(`SELECT * FROM messages WHERE id = ?`)
@@ -544,6 +610,7 @@ function interactWithPost(postId, userId, type, content = null) {
         `SELECT id FROM interactions WHERE postId = ? AND userId = ? AND type = 'like'`,
       )
       .get(postId, userId);
+
     if (existing) {
       db.prepare(`DELETE FROM interactions WHERE id = ?`).run(existing.id);
       return { liked: false };
@@ -601,6 +668,7 @@ function deletePost(postId) {
     db.prepare("DELETE FROM interactions WHERE postId = ?").run(postId);
     db.prepare("DELETE FROM posts WHERE id = ?").run(postId);
   });
+
   transaction();
 }
 
@@ -614,14 +682,15 @@ function getFeedForUser(userId) {
     .all(userId);
 
   const followingIds = following.map((f) => f.followingId);
-  followingIds.push(userId); // Include own posts
+  followingIds.push(userId);
 
   const placeholders = followingIds.map(() => "?").join(",");
+
   return db
     .prepare(
       `
     SELECT 
-      p.id, p.authorId, p.content, p.imageUrl, p.videoUrl, p.createdAt,
+      p.id, p.authorId, p.content, p.imageUrl, p.videoUrl, p.createdAt, p.communityId, p.postType,
       u.username, u.displayName, u.profileImage,
       (SELECT COUNT(*) FROM interactions WHERE postId = p.id AND type = 'like') as likeCount,
       (SELECT COUNT(*) FROM interactions WHERE postId = p.id AND type = 'comment') as commentCount,
@@ -630,6 +699,7 @@ function getFeedForUser(userId) {
     FROM posts p
     JOIN users u ON p.authorId = u.id
     WHERE p.authorId IN (${placeholders})
+      AND p.communityId IS NULL
     ORDER BY p.createdAt DESC
     LIMIT 50
   `,
@@ -641,7 +711,7 @@ function getPostsByUserId(userId) {
   return db
     .prepare(
       `
-    SELECT id, content, imageUrl, videoUrl, createdAt
+    SELECT id, content, imageUrl, videoUrl, createdAt, communityId, postType
     FROM posts
     WHERE authorId = ?
     ORDER BY createdAt DESC
@@ -663,6 +733,160 @@ function getAllCommunities() {
     .all();
 }
 
+function getCommunityMembership(communityId, userId) {
+  return db
+    .prepare(
+      `
+    SELECT communityId, userId, role, createdAt
+    FROM community_members
+    WHERE communityId = ? AND userId = ?
+  `,
+    )
+    .get(communityId, userId);
+}
+
+function isCommunityMember(communityId, userId) {
+  return !!getCommunityMembership(communityId, userId);
+}
+
+function isCommunityAdmin(communityId, userId) {
+  const membership = getCommunityMembership(communityId, userId);
+  return membership?.role === "admin";
+}
+
+function requireCommunityAdmin(communityId, userId) {
+  if (!isCommunityAdmin(communityId, userId)) {
+    const error = new Error("Only community admins can do this.");
+    error.statusCode = 403;
+    throw error;
+  }
+}
+
+function getActiveCommunityBan(communityId, userId) {
+  return db
+    .prepare(
+      `
+    SELECT *
+    FROM community_bans
+    WHERE communityId = ?
+      AND userId = ?
+      AND datetime(bannedUntil) > datetime('now')
+    ORDER BY datetime(bannedUntil) DESC
+    LIMIT 1
+  `,
+    )
+    .get(communityId, userId);
+}
+
+function getCommunityMembers(communityId) {
+  return db
+    .prepare(
+      `
+    SELECT 
+      cm.communityId,
+      cm.userId,
+      cm.role,
+      cm.createdAt,
+      u.username,
+      u.displayName,
+      u.profileImage
+    FROM community_members cm
+    JOIN users u ON cm.userId = u.id
+    WHERE cm.communityId = ?
+    ORDER BY 
+      CASE WHEN cm.role = 'admin' THEN 0 ELSE 1 END,
+      COALESCE(u.displayName, u.username),
+      u.username
+  `,
+    )
+    .all(communityId);
+}
+
+function promoteCommunityMemberToAdmin(communityId, targetUserId, adminUserId) {
+  requireCommunityAdmin(communityId, adminUserId);
+
+  const membership = getCommunityMembership(communityId, targetUserId);
+
+  if (!membership) {
+    const error = new Error("User must join the community before becoming an admin.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  db.prepare(
+    `
+    UPDATE community_members
+    SET role = 'admin'
+    WHERE communityId = ? AND userId = ?
+  `,
+  ).run(communityId, targetUserId);
+
+  return getCommunityMembership(communityId, targetUserId);
+}
+
+function banCommunityMember(
+  communityId,
+  targetUserId,
+  adminUserId,
+  durationMinutes = 10,
+  reason = null,
+) {
+  requireCommunityAdmin(communityId, adminUserId);
+
+  const targetMembership = getCommunityMembership(communityId, targetUserId);
+
+  if (!targetMembership) {
+    const error = new Error("User must be a community member before they can be banned.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (targetMembership.role === "admin") {
+    const error = new Error("Community admins cannot temporarily ban other admins.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const duration = Math.min(Math.max(parseInt(durationMinutes, 10) || 10, 1), 10);
+  const bannedUntil = new Date(Date.now() + duration * 60 * 1000).toISOString();
+
+  const result = db
+    .prepare(
+      `
+    INSERT INTO community_bans (communityId, userId, bannedBy, reason, bannedUntil)
+    VALUES (?, ?, ?, ?, ?)
+  `,
+    )
+    .run(communityId, targetUserId, adminUserId, reason, bannedUntil);
+
+  return db
+    .prepare(`SELECT * FROM community_bans WHERE id = ?`)
+    .get(result.lastInsertRowid);
+}
+
+function deleteCommunityPost(postId, adminUserId) {
+  const postData = getPostById(postId);
+
+  if (!postData) {
+    const error = new Error("Post not found.");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const post = postData.post;
+
+  if (!post.communityId) {
+    const error = new Error("This is not a community post.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  requireCommunityAdmin(post.communityId, adminUserId);
+  deletePost(postId);
+
+  return { success: true };
+}
+
 function getCommunityById(id, userId = null) {
   const community = db
     .prepare(
@@ -676,14 +900,14 @@ function getCommunityById(id, userId = null) {
     .get(id);
 
   if (community && userId) {
-    const membership = db
-      .prepare(
-        `
-      SELECT 1 FROM community_members WHERE communityId = ? AND userId = ?
-    `,
-      )
-      .get(id, userId);
+    const membership = getCommunityMembership(id, userId);
+    const activeBan = getActiveCommunityBan(id, userId);
+
     community.isMember = !!membership;
+    community.memberRole = membership?.role || null;
+    community.isAdmin = membership?.role === "admin";
+    community.isPostBanned = !!activeBan;
+    community.activeBan = activeBan || null;
   }
 
   return community;
@@ -691,8 +915,10 @@ function getCommunityById(id, userId = null) {
 
 function joinCommunity(communityId, userId) {
   db.prepare(
-    `INSERT OR IGNORE INTO community_members (communityId, userId) VALUES (?, ?)`,
+    `INSERT OR IGNORE INTO community_members (communityId, userId, role) VALUES (?, ?, 'member')`,
   ).run(communityId, userId);
+
+  return getCommunityMembership(communityId, userId);
 }
 
 function leaveCommunity(communityId, userId) {
@@ -705,30 +931,136 @@ function getCommunitiesByUserId(userId) {
   return db
     .prepare(
       `
-    SELECT c.* 
+    SELECT c.*,
+      cm.role as memberRole,
+      (cm.role = 'admin') as isAdmin,
+      (SELECT COUNT(*) FROM community_members WHERE communityId = c.id) as memberCount
     FROM communities c
     JOIN community_members cm ON c.id = cm.communityId
     WHERE cm.userId = ?
+    ORDER BY c.name
   `,
     )
     .all(userId);
 }
 
 function createCommunity(name, type, category, description, creatorId) {
-  const result = db
+  const transaction = db.transaction(() => {
+    const result = db
+      .prepare(
+        `
+      INSERT INTO communities (name, type, category, description, creatorId) 
+      VALUES (?, ?, ?, ?, ?)
+    `,
+      )
+      .run(name, type, category, description, creatorId);
+
+    const id = result.lastInsertRowid;
+
+    db.prepare(
+      `INSERT INTO community_members (communityId, userId, role) VALUES (?, ?, 'admin')`,
+    ).run(id, creatorId);
+
+    return id;
+  });
+
+  const id = transaction();
+  return getCommunityById(id, creatorId);
+}
+
+function createPost(
+  authorId,
+  content,
+  imageUrl = null,
+  videoUrl = null,
+  communityId = null,
+  postType = "post",
+) {
+  const normalizedCommunityId = communityId ? parseInt(communityId, 10) : null;
+  const normalizedPostType = postType === "announcement" ? "announcement" : "post";
+
+  if (normalizedCommunityId) {
+    const membership = getCommunityMembership(normalizedCommunityId, authorId);
+
+    if (!membership) {
+      const error = new Error("You must join this community before posting.");
+      error.statusCode = 403;
+      throw error;
+    }
+
+    if (normalizedPostType === "announcement" && membership.role !== "admin") {
+      const error = new Error("Only community admins can create announcements.");
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const activeBan = getActiveCommunityBan(normalizedCommunityId, authorId);
+
+    if (activeBan && membership.role !== "admin") {
+      const error = new Error(
+        "You are temporarily banned from posting in this community.",
+      );
+      error.statusCode = 403;
+      error.ban = activeBan;
+      throw error;
+    }
+  }
+
+  const info = db
     .prepare(
       `
-    INSERT INTO communities (name, type, category, description, creatorId) 
-    VALUES (?, ?, ?, ?, ?)
+    INSERT INTO posts (authorId, content, imageUrl, videoUrl, communityId, postType) 
+    VALUES (?, ?, ?, ?, ?, ?)
   `,
     )
-    .run(name, type, category, description, creatorId);
+    .run(
+      authorId,
+      content,
+      imageUrl,
+      videoUrl,
+      normalizedCommunityId,
+      normalizedPostType,
+    );
 
-  const id = result.lastInsertRowid;
-  db.prepare(
-    `INSERT INTO community_members (communityId, userId, role) VALUES (?, ?, 'admin')`,
-  ).run(id, creatorId);
-  return getCommunityById(id);
+  return db
+    .prepare(
+      `
+    SELECT p.*, u.username, u.displayName, u.profileImage
+    FROM posts p
+    JOIN users u ON p.authorId = u.id
+    WHERE p.id = ?
+  `,
+    )
+    .get(info.lastInsertRowid);
+}
+
+function getCommunityFeed(communityId, viewerId) {
+  if (!isCommunityMember(communityId, viewerId)) {
+    const error = new Error("You must join this community to view its feed.");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  return db
+    .prepare(
+      `
+    SELECT 
+      p.id, p.authorId, p.content, p.imageUrl, p.videoUrl, p.createdAt, p.communityId, p.postType,
+      u.username, u.displayName, u.profileImage,
+      (SELECT COUNT(*) FROM interactions WHERE postId = p.id AND type = 'like') as likeCount,
+      (SELECT COUNT(*) FROM interactions WHERE postId = p.id AND type = 'comment') as commentCount,
+      (SELECT COUNT(*) FROM interactions WHERE postId = p.id AND type = 'share') as shareCount,
+      (SELECT COUNT(*) FROM interactions WHERE postId = p.id AND userId = ? AND type = 'like') as isLiked
+    FROM posts p
+    JOIN users u ON p.authorId = u.id
+    WHERE p.communityId = ?
+    ORDER BY
+      CASE WHEN p.postType = 'announcement' THEN 0 ELSE 1 END,
+      datetime(p.createdAt) DESC
+    LIMIT 100
+  `,
+    )
+    .all(viewerId, communityId);
 }
 
 function getAllPosts() {
@@ -742,6 +1074,7 @@ function getAllPosts() {
       0 as isLiked
     FROM posts p
     JOIN users u ON p.authorId = u.id
+    WHERE p.communityId IS NULL
     ORDER BY p.createdAt DESC LIMIT 50
   `,
     )
@@ -758,6 +1091,7 @@ function getMessagesForThread(threadId, afterMessageId = 0) {
   `,
     )
     .all(threadId, afterMessageId);
+
   return messages.map(serializeMessage);
 }
 
@@ -806,6 +1140,7 @@ function updateThreadName(threadId, newName) {
   db.prepare(
     "UPDATE threads SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
   ).run(newName, threadId);
+
   return getThreadById(threadId);
 }
 
@@ -839,6 +1174,7 @@ function isBlocked(userId, otherUserId) {
   `,
     )
     .get(userId, otherUserId, otherUserId, userId);
+
   return !!row;
 }
 
@@ -848,33 +1184,12 @@ function isBlockedByAny(userId, threadId) {
       `SELECT user_id FROM thread_participants WHERE thread_id = ? AND user_id != ?`,
     )
     .all(threadId, userId);
+
   for (const p of participants) {
     if (isBlocked(userId, p.user_id)) return true;
   }
+
   return false;
-}
-
-function createPost(authorId, content, imageUrl = null, videoUrl = null) {
-  const info = db
-    .prepare(
-      `
-    INSERT INTO posts (authorId, content, imageUrl, videoUrl) 
-    VALUES (?, ?, ?, ?)
-  `,
-    )
-    .run(authorId, content, imageUrl, videoUrl);
-
-  // Return the full post object with author details for the frontend
-  return db
-    .prepare(
-      `
-    SELECT p.*, u.username, u.displayName, u.profileImage
-    FROM posts p
-    JOIN users u ON p.authorId = u.id
-    WHERE p.id = ?
-  `,
-    )
-    .get(info.lastInsertRowid);
 }
 
 function getRecentPosts() {
@@ -884,6 +1199,7 @@ function getRecentPosts() {
     SELECT p.*, u.username, u.displayName 
     FROM posts p 
     JOIN users u ON p.authorId = u.id 
+    WHERE p.communityId IS NULL
     ORDER BY p.createdAt DESC 
     LIMIT 50
   `,
@@ -894,6 +1210,7 @@ function getRecentPosts() {
 module.exports = {
   db,
   dbPath,
+
   getThreadById,
   getOrCreateDirectThread,
   isBlocked,
@@ -909,28 +1226,43 @@ module.exports = {
   blockUser,
   unblockUser,
   getBlockedUsers,
+
   createPost,
   deletePost,
+  deleteCommunityPost,
   interactWithPost,
   getPostById,
   getFeedForUser,
   getPostsByUserId,
   getRecentPosts,
   getAllPosts,
+  getCommunityFeed,
+
   getAllUsers,
   getUserById,
   getUserByUsername,
   createUser,
   updateUserPassword,
+  updateUser,
   toggleFollow,
   getFollowers,
+  getFollowing,
+
   getAllCommunities,
   getCommunityById,
   joinCommunity,
   leaveCommunity,
   getCommunitiesByUserId,
   createCommunity,
-  getFollowing,
+  getCommunityMembership,
+  getCommunityMembers,
+  isCommunityMember,
+  isCommunityAdmin,
+  requireCommunityAdmin,
+  getActiveCommunityBan,
+  promoteCommunityMemberToAdmin,
+  banCommunityMember,
+
   serializeThread,
   normalizeUserIds,
 };
