@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -15,7 +15,6 @@ import {
   Share
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from '@react-navigation/native';
 import { SERVER_URL } from '../config';
 import { COLORS, SPACING } from '../theme';
 import { useAuth } from '../navigation';
@@ -59,11 +58,9 @@ export default function FeedScreen({ navigation }) {
     }
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchFeed();
-    }, [userId])
-  );
+  useEffect(() => {
+    fetchFeed();
+  }, [userId]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -216,19 +213,25 @@ export default function FeedScreen({ navigation }) {
       <View style={styles.postContainer}>
         {/* Post Header */}
         <View style={styles.postHeader}>
-          <View style={styles.authorInfo}>
+          <Pressable
+            style={styles.authorInfo}
+            onPress={() =>
+              navigation.navigate("OtherUserProfile", { userId: item.authorId })
+            }
+          >
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>
-                {item.displayName?.charAt(0).toUpperCase() || 'U'}
+                {item.displayName?.charAt(0).toUpperCase() || "U"}
               </Text>
             </View>
+
             <View>
               <Text style={styles.authorName}>{item.displayName || "Unknown"}</Text>
               <Text style={styles.postTime}>
                 {new Date(item.createdAt).toLocaleDateString()}
               </Text>
             </View>
-          </View>
+          </Pressable>
           {item.authorId?.toString() === userId?.toString() && (
             <Pressable onPress={() => handleDeletePost(item.id)}>
               <Ionicons name="ellipsis-vertical" size={24} color={COLORS.primary} />

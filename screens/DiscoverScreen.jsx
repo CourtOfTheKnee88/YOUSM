@@ -42,11 +42,7 @@ export default function DiscoverScreen({ navigation }) {
         style={styles.resultCard}
         onPress={() => {
           if (isPerson) {
-            // Navigates to the local ProfileHome route within the current stack
-            navigation.navigate("UserProfile", { 
-              userId: item.id,
-              userName: item.displayName || item.username 
-            });
+            navigation.navigate("OtherUserProfile", { userId: item.id });
           } else {
             navigation.navigate("CommunityDetail", { communityId: item.id });
           }

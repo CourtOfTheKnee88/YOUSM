@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import {
+  Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,35 +18,39 @@ import { useAuth } from "../navigation";
 
 export default function ProfileScreen({ navigation }) {
   const { userId, signOut } = useAuth();
+
   const [user, setUser] = useState(null);
   const [joinedCommunities, setJoinedCommunities] = useState([]);
+  const [followRequests, setFollowRequests] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [requestLoadingId, setRequestLoadingId] = useState(null);
+
+  const getFullImageUrl = (imagePath) => {
+    if (!imagePath) return null;
+    if (imagePath.startsWith("http")) return imagePath;
+    return `${SERVER_URL}${imagePath}`;
+  };
 
   const fetchProfile = async () => {
     if (!userId) {
-      console.warn("userId is not available yet");
       setLoading(false);
       return;
     }
 
     try {
-      console.log("Fetching profile for userId:", userId);
-      const [userRes, commRes] = await Promise.all([
+      const [userRes, commRes, requestRes] = await Promise.all([
         fetch(`${SERVER_URL}/users/${userId}`),
         fetch(`${SERVER_URL}/communities/user/${userId}`),
+        fetch(`${SERVER_URL}/users/${userId}/follow-requests`),
       ]);
-
-      console.log("User response status:", userRes.status);
-      console.log("Communities response status:", commRes.status);
 
       const userData = await userRes.json();
       const commData = await commRes.json();
-
-      console.log("User data:", userData);
-      console.log("Communities data:", commData);
+      const requestData = await requestRes.json();
 
       if (userData.user) setUser(userData.user);
       if (commData.communities) setJoinedCommunities(commData.communities);
+      if (requestData.requests) setFollowRequests(requestData.requests);
     } catch (error) {
       console.error("Failed to load profile:", error);
     } finally {
@@ -56,10 +62,44 @@ export default function ProfileScreen({ navigation }) {
     await signOut();
   };
 
+  const handleFollowRequestResponse = async (requestId, action) => {
+    if (!userId || !requestId) return;
+
+    setRequestLoadingId(requestId);
+
+    try {
+      const res = await fetch(
+        `${SERVER_URL}/users/${userId}/follow-requests/${requestId}/respond`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action }),
+        }
+      );
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to respond to request");
+      }
+
+      setFollowRequests((prev) =>
+        prev.filter((request) => request.id !== requestId)
+      );
+
+      fetchProfile();
+    } catch (error) {
+      console.error("Follow request response failed:", error);
+      Alert.alert("Error", error.message || "Could not update request.");
+    } finally {
+      setRequestLoadingId(null);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       fetchProfile();
-    }, [userId]),
+    }, [userId])
   );
 
   useEffect(() => {
@@ -74,7 +114,7 @@ export default function ProfileScreen({ navigation }) {
 
   if (loading || !user) {
     return (
-      <SafeAreaView style={[styles.screen, { justifyContent: "center" }]}>
+      <SafeAreaView style={[styles.screen, styles.centered]}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </SafeAreaView>
     );
@@ -119,9 +159,6 @@ export default function ProfileScreen({ navigation }) {
           </Text>
           <Text style={styles.infoLine}>Major: {user.major || "Not set"}</Text>
           <Text style={styles.infoLine}>
-            Alumni Class Year: {user.alumniClassYear || "Not set"}
-          </Text>
-          <Text style={styles.infoLine}>
             Employer: {user.employer || "Not set"}
           </Text>
           <Text style={styles.infoLine}>
@@ -158,15 +195,51 @@ export default function ProfileScreen({ navigation }) {
     >
       <View style={styles.heroCard}>
         <View style={styles.avatarCircle}>
-          <Text style={styles.avatarInitial}>
-            {user.displayName?.charAt(0) || "U"}
-          </Text>
+          {user.profileImage ? (
+            <Image
+              source={{ uri: getFullImageUrl(user.profileImage) }}
+              style={styles.avatarImage}
+            />
+          ) : (
+            <Text style={styles.avatarInitial}>
+              {(user.displayName || user.username || "U").charAt(0)}
+            </Text>
+          )}
         </View>
-        <Text style={styles.profileName}>{user.displayName}</Text>
+
+        <Text style={styles.profileName}>
+          {user.displayName || user.username}
+        </Text>
+
         <Text style={styles.profileUsername}>
           @{user.username} • {user.role}
         </Text>
+
+        <View style={styles.accountBadge}>
+          <Ionicons
+            name={user.isPrivate ? "lock-closed" : "globe-outline"}
+            size={15}
+            color={COLORS.primary}
+          />
+          <Text style={styles.accountBadgeText}>
+            {user.isPrivate ? "Private Account" : "Public Account"}
+          </Text>
+        </View>
+
         <Text style={styles.bioText}>{user.bio || "No bio yet."}</Text>
+
+        <View style={styles.statsRow}>
+          <View style={styles.statBox}>
+            <Text style={styles.statNumber}>{user.followerCount || 0}</Text>
+            <Text style={styles.statLabel}>Followers</Text>
+          </View>
+
+          <View style={styles.statBox}>
+            <Text style={styles.statNumber}>{user.followingCount || 0}</Text>
+            <Text style={styles.statLabel}>Following</Text>
+          </View>
+        </View>
+
         <Pressable
           style={styles.editBtn}
           onPress={() => navigation.navigate("EditProfile", { user })}
@@ -175,58 +248,131 @@ export default function ProfileScreen({ navigation }) {
         </Pressable>
       </View>
 
+      {followRequests.length > 0 && (
+        <InfoCard title="Follow Requests">
+          {followRequests.map((request) => (
+            <View key={request.id} style={styles.requestCard}>
+              <Pressable
+                style={styles.requestUser}
+                onPress={() =>
+                  navigation.navigate("OtherUserProfile", {
+                    userId: request.requesterId,
+                  })
+                }
+              >
+                <View style={styles.requestAvatar}>
+                  {request.profileImage ? (
+                    <Image
+                      source={{ uri: getFullImageUrl(request.profileImage) }}
+                      style={styles.requestAvatarImage}
+                    />
+                  ) : (
+                    <Text style={styles.requestAvatarText}>
+                      {(request.displayName || request.username || "U").charAt(
+                        0
+                      )}
+                    </Text>
+                  )}
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.requestName}>
+                    {request.displayName || request.username}
+                  </Text>
+                  <Text style={styles.requestMeta}>
+                    @{request.username} • {request.role || "Student"}
+                  </Text>
+                </View>
+              </Pressable>
+
+              <View style={styles.requestButtons}>
+                <Pressable
+                  style={styles.acceptButton}
+                  disabled={requestLoadingId === request.id}
+                  onPress={() =>
+                    handleFollowRequestResponse(request.id, "accept")
+                  }
+                >
+                  <Text style={styles.acceptButtonText}>Accept</Text>
+                </Pressable>
+
+                <Pressable
+                  style={styles.denyButton}
+                  disabled={requestLoadingId === request.id}
+                  onPress={() =>
+                    handleFollowRequestResponse(request.id, "deny")
+                  }
+                >
+                  <Text style={styles.denyButtonText}>Deny</Text>
+                </Pressable>
+              </View>
+            </View>
+          ))}
+        </InfoCard>
+      )}
+
       {renderRoleSection()}
 
       <InfoCard title="Interests">
-        <View style={styles.tagWrap}>
-          {(user.interests || "")
-            .split(",")
-            .filter(Boolean)
-            .map((interest) => (
-              <View key={interest} style={styles.tag}>
-                <Text style={styles.tagText}>{interest}</Text>
-              </View>
-            ))}
-        </View>
+        {user.interests ? (
+          <View style={styles.tagWrap}>
+            {user.interests
+              .split(",")
+              .map((interest) => interest.trim())
+              .filter(Boolean)
+              .map((interest) => (
+                <View key={interest} style={styles.tag}>
+                  <Text style={styles.tagText}>{interest}</Text>
+                </View>
+              ))}
+          </View>
+        ) : (
+          <Text style={styles.infoLine}>No interests added yet.</Text>
+        )}
       </InfoCard>
 
       <InfoCard title="Joined Communities">
-        {joinedCommunities.map((community) => (
-          <Pressable
-            key={community.id}
-            style={styles.communityItem}
-            onPress={() =>
-              navigation.navigate("CommunityDetail", {
-                communityId: community.id,
-                name: community.name,
-                description: community.description,
-                type: community.type,
-                category: community.category,
-                memberCount: community.memberCount,
-              })
-            }
-          >
-            <Text style={styles.communityName}>{community.name}</Text>
-            <Text style={styles.communityType}>{community.type}</Text>
-          </Pressable>
-        ))}
+        {joinedCommunities.length > 0 ? (
+          joinedCommunities.map((community) => (
+            <Pressable
+              key={community.id}
+              style={styles.communityItem}
+              onPress={() =>
+                navigation.navigate("CommunityDetail", {
+                  communityId: community.id,
+                  name: community.name,
+                  description: community.description,
+                  type: community.type,
+                  category: community.category,
+                  memberCount: community.memberCount,
+                })
+              }
+            >
+              <View>
+                <Text style={styles.communityName}>{community.name}</Text>
+                <Text style={styles.communityType}>
+                  {community.type} • {community.category}
+                </Text>
+              </View>
+
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={24}
+                color={COLORS.textLight}
+              />
+            </Pressable>
+          ))
+        ) : (
+          <Text style={styles.infoLine}>You have not joined any communities yet.</Text>
+        )}
       </InfoCard>
 
-      <View style={styles.actionRow}>
-        <Pressable
-          style={styles.primaryButton}
-          onPress={() => navigation.navigate("Communities")}
-        >
-          <Text style={styles.primaryButtonText}>Browse Communities</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.secondaryButton}
-          onPress={() => navigation.navigate("Discover")}
-        >
-          <Text style={styles.secondaryButtonText}>Discover</Text>
-        </Pressable>
-      </View>
+      <Pressable
+        style={styles.primaryButton}
+        onPress={() => navigation.navigate("Communities")}
+      >
+        <Text style={styles.primaryButtonText}>Browse Communities</Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -245,9 +391,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  centered: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
   container: {
     padding: SPACING.padding,
     paddingBottom: 40,
+  },
+  logoutBtn: {
+    marginRight: 12,
   },
   heroCard: {
     backgroundColor: COLORS.surface,
@@ -264,148 +417,226 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
   },
   avatarCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 92,
+    height: 92,
+    borderRadius: 46,
     backgroundColor: COLORS.primary,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
+    overflow: "hidden",
   },
-  avatarInitial: { color: "#FFF", fontSize: 32, fontWeight: "800" },
+  avatarImage: {
+    width: "100%",
+    height: "100%",
+  },
+  avatarInitial: {
+    color: "#FFF",
+    fontSize: 34,
+    fontWeight: "900",
+    textTransform: "uppercase",
+  },
   profileName: {
     fontSize: 24,
-    fontWeight: "800",
+    fontWeight: "900",
     color: COLORS.primary,
-    marginBottom: 4,
+    textAlign: "center",
   },
   profileUsername: {
-    color: COLORS.secondary,
-    fontWeight: "700",
-    marginBottom: 12,
+    color: COLORS.textLight,
+    marginTop: 4,
+    fontSize: 14,
+  },
+  accountBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: COLORS.background,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginTop: 10,
+  },
+  accountBadgeText: {
+    color: COLORS.primary,
+    fontWeight: "800",
+    fontSize: 13,
   },
   bioText: {
-    textAlign: "center",
     color: COLORS.text,
-    fontSize: 15,
-    lineHeight: 20,
-    marginBottom: 16,
+    textAlign: "center",
+    marginTop: 12,
+    lineHeight: 21,
+  },
+  statsRow: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+    marginTop: 16,
+    marginBottom: 14,
+  },
+  statBox: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    borderRadius: 18,
+    padding: 12,
+    alignItems: "center",
+  },
+  statNumber: {
+    color: COLORS.primary,
+    fontWeight: "900",
+    fontSize: 22,
+  },
+  statLabel: {
+    color: COLORS.textLight,
+    fontWeight: "700",
+    fontSize: 12,
+    marginTop: 2,
   },
   editBtn: {
-    backgroundColor: COLORS.background,
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
+    backgroundColor: COLORS.primary,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 26,
+    width: "100%",
+    alignItems: "center",
   },
-  editBtnText: { color: COLORS.primary, fontWeight: "700" },
+  editBtnText: {
+    color: "#FFF",
+    fontWeight: "900",
+    fontSize: 15,
+  },
   infoCard: {
     backgroundColor: COLORS.surface,
-    borderRadius: 20,
+    borderRadius: 22,
     padding: 18,
     marginBottom: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   infoCardTitle: {
-    fontSize: 17,
-    fontWeight: "800",
+    fontSize: 18,
+    fontWeight: "900",
     color: COLORS.primary,
     marginBottom: 12,
   },
   infoLine: {
     fontSize: 15,
-    color: "#000000",
-    marginBottom: 8,
-  },
-  infoSubheading: {
-    fontSize: 15,
-    fontWeight: "800",
-    color: "#042752",
-    marginTop: 6,
-    marginBottom: 8,
-  },
-  bulletLine: {
-    fontSize: 15,
-    color: "#000000",
-    marginBottom: 8,
+    color: COLORS.textLight,
+    marginBottom: 7,
   },
   tagWrap: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 8,
   },
   tag: {
-    backgroundColor: "#F5A841",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    backgroundColor: COLORS.background,
     borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
   },
   tagText: {
-    color: "#042752",
-    fontWeight: "700",
+    color: COLORS.primary,
+    fontWeight: "800",
   },
-  communityItem: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 14,
-    padding: 14,
+  requestCard: {
+    backgroundColor: COLORS.background,
+    borderRadius: 18,
+    padding: 12,
     marginBottom: 10,
-    borderWidth: 2,
-    borderColor: "#F5A841",
   },
-  communityName: {
-    color: "#042752",
-    fontWeight: "700",
+  requestUser: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  requestAvatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: COLORS.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 10,
+    overflow: "hidden",
+  },
+  requestAvatarImage: {
+    width: "100%",
+    height: "100%",
+  },
+  requestAvatarText: {
+    color: "#FFF",
+    fontWeight: "900",
+    fontSize: 18,
+    textTransform: "uppercase",
+  },
+  requestName: {
+    color: COLORS.text,
+    fontWeight: "900",
     fontSize: 15,
   },
-  communityType: {
-    color: "#000000",
-    marginTop: 4,
+  requestMeta: {
+    color: COLORS.textLight,
+    fontSize: 12,
+    marginTop: 2,
   },
-  actionRow: {
-    marginTop: 4,
-    gap: 12,
+  requestButtons: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  acceptButton: {
+    flex: 1,
+    backgroundColor: COLORS.primary,
+    borderRadius: 14,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  acceptButtonText: {
+    color: "#FFF",
+    fontWeight: "900",
+  },
+  denyButton: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+    borderRadius: 14,
+    paddingVertical: 10,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  denyButtonText: {
+    color: COLORS.text,
+    fontWeight: "900",
+  },
+  communityItem: {
+    backgroundColor: COLORS.background,
+    padding: 14,
+    borderRadius: 16,
+    marginBottom: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  communityName: {
+    color: COLORS.text,
+    fontSize: 15,
+    fontWeight: "900",
+  },
+  communityType: {
+    color: COLORS.textLight,
+    fontSize: 13,
+    marginTop: 3,
   },
   primaryButton: {
-    backgroundColor: "#042752",
+    backgroundColor: COLORS.primary,
+    borderRadius: 18,
     paddingVertical: 14,
-    borderRadius: 14,
     alignItems: "center",
   },
   primaryButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
+    color: "#FFF",
+    fontWeight: "900",
     fontSize: 15,
-  },
-  secondaryButton: {
-    backgroundColor: "#F5A841",
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#042752",
-  },
-  secondaryButtonText: {
-    color: "#042752",
-    fontWeight: "700",
-    fontSize: 15,
-  },
-  moderatorButton: {
-    backgroundColor: "#FFFFFF",
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: "center",
-    borderWidth: 2,
-    borderColor: "#042752",
-  },
-  moderatorButtonText: {
-    color: "#042752",
-    fontWeight: "800",
-    fontSize: 15,
-  },
-  logoutBtn: {
-    marginRight: 16,
-    padding: 8,
   },
 });

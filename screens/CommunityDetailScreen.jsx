@@ -35,7 +35,7 @@ export default function CommunityDetailScreen({ route, navigation }) {
       const [commRes, membersRes, followingRes] = await Promise.all([
         fetch(`${SERVER_URL}/communities/${communityId}?userId=${userId}`),
         fetch(`${SERVER_URL}/communities/${communityId}/members`),
-        fetch(`${SERVER_URL}/users/${userId}/following`)
+        fetch(`${SERVER_URL}/users/${userId}/following`),
       ]);
 
       const commData = await commRes.json();
@@ -53,8 +53,8 @@ export default function CommunityDetailScreen({ route, navigation }) {
 
       if (followingData.following) {
         const map = {};
-        followingData.following.forEach(f => {
-          map[f.id] = true;
+        followingData.following.forEach((followedUser) => {
+          map[followedUser.id] = true;
         });
         setFollowingMap(map);
       }
@@ -120,6 +120,8 @@ export default function CommunityDetailScreen({ route, navigation }) {
           ? `Joined ${community.name}!`
           : `Left ${community.name}.`
       );
+
+      fetchDetails();
     } catch (error) {
       console.error("Error toggling join:", error);
       Alert.alert("Error", error.message || "Could not update membership.");
@@ -127,18 +129,26 @@ export default function CommunityDetailScreen({ route, navigation }) {
   };
 
   const toggleFollowMember = async (targetUserId) => {
+    if (!userId || !targetUserId) return;
+
     try {
       const res = await fetch(`${SERVER_URL}/users/${targetUserId}/follow`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ followerId: userId })
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requesterId: userId }),
       });
+
       const data = await res.json();
+
       if (res.ok) {
-        setFollowingMap(prev => ({
+        setFollowingMap((prev) => ({
           ...prev,
-          [targetUserId]: data.following
+          [targetUserId]: data.status === "following",
         }));
+
+        if (data.status === "requested") {
+          Alert.alert("Request Sent", "Your follow request was sent.");
+        }
       } else {
         Alert.alert("Error", data.error || "Failed to update follow status");
       }
@@ -260,48 +270,58 @@ export default function CommunityDetailScreen({ route, navigation }) {
 
         <View style={styles.membersSection}>
           <Text style={styles.sectionTitle}>Community Members</Text>
+
           {members.map((member) => (
-            <View key={member.userId} style={styles.memberRow}>
-              <Pressable 
-                style={({ pressed }) => [styles.memberInfo, { opacity: pressed ? 0.7 : 1 }]}
-                onPress={() => {
-                  if (member.userId === parseInt(userId)) {
-                    navigation.navigate("Profile");
-                  } else {
-                    navigation.navigate("UserProfile", { 
-                      userId: member.userId,
-                      userName: member.displayName || member.username 
-                    });
-                  }
-                }}
-              >
+            <Pressable
+              key={member.userId}
+              style={styles.memberRow}
+              onPress={() =>
+                navigation.navigate("OtherUserProfile", {
+                  userId: member.userId,
+                })
+              }
+            >
+              <View style={styles.memberInfo}>
                 <View style={styles.memberAvatar}>
                   <Text style={styles.avatarText}>
-                    {member.displayName?.charAt(0) || member.username?.charAt(0) || "?"}
+                    {member.displayName?.charAt(0).toUpperCase() ||
+                      member.username?.charAt(0).toUpperCase() ||
+                      "?"}
                   </Text>
                 </View>
+
                 <View>
-                  <Text style={styles.memberName}>{member.displayName || member.username}</Text>
+                  <Text style={styles.memberName}>
+                    {member.displayName || member.username}
+                  </Text>
                   <Text style={styles.memberRoleBadge}>
-                    {member.role === 'admin' ? 'Community Admin' : 'Member'}
+                    {member.role === "admin" ? "Community Admin" : "Member"}
                   </Text>
                 </View>
-              </Pressable>
-              
+              </View>
+
               {member.userId !== parseInt(userId) && (
-                <Pressable 
+                <Pressable
                   style={[
-                    styles.followBtn, 
-                    followingMap[member.userId] && styles.followingBtn
+                    styles.followBtn,
+                    followingMap[member.userId] && styles.followingBtn,
                   ]}
-                  onPress={() => toggleFollowMember(member.userId)}
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    toggleFollowMember(member.userId);
+                  }}
                 >
-                  <Text style={[styles.followBtnText, followingMap[member.userId] && styles.followingBtnText]}>
+                  <Text
+                    style={[
+                      styles.followBtnText,
+                      followingMap[member.userId] && styles.followingBtnText,
+                    ]}
+                  >
                     {followingMap[member.userId] ? "Following" : "Follow"}
                   </Text>
                 </Pressable>
               )}
-            </View>
+            </Pressable>
           ))}
         </View>
       </ScrollView>
@@ -453,14 +473,14 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: "800",
     color: COLORS.primary,
     marginBottom: 16,
   },
   memberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: COLORS.surface,
     padding: 12,
     borderRadius: 16,
@@ -469,8 +489,8 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   memberInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
   memberAvatar: {
@@ -478,19 +498,42 @@ const styles = StyleSheet.create({
     height: 42,
     borderRadius: 21,
     backgroundColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 12,
   },
-  avatarText: { color: "#FFF", fontWeight: 'bold', fontSize: 16 },
-  memberName: { fontSize: 15, fontWeight: '700', color: COLORS.text },
-  memberRoleBadge: { fontSize: 12, color: COLORS.textLight, marginTop: 1 },
-  followBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
-  followingBtn: { 
-    backgroundColor: COLORS.secondary, 
-    borderWidth: 1, 
-    borderColor: COLORS.primary 
+  avatarText: {
+    color: "#FFF",
+    fontWeight: "bold",
+    fontSize: 16,
   },
-  followBtnText: { color: "#FFF", fontWeight: '700', fontSize: 12 },
-  followingBtnText: { color: COLORS.primary },
+  memberName: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: COLORS.text,
+  },
+  memberRoleBadge: {
+    fontSize: 12,
+    color: COLORS.textLight,
+    marginTop: 1,
+  },
+  followBtn: {
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  followingBtn: {
+    backgroundColor: COLORS.secondary,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+  },
+  followBtnText: {
+    color: "#FFF",
+    fontWeight: "700",
+    fontSize: 12,
+  },
+  followingBtnText: {
+    color: COLORS.primary,
+  },
 });
