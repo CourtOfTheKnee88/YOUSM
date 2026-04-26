@@ -6,7 +6,7 @@ import LoginScreen from "./screens/Login";
 import HomeScreen, { HeaderLogo } from "./screens/HomeScreen";
 import ProfileScreen from "./screens/ProfileScreen.js";
 import EditProfileScreen from "./screens/EditProfileScreen.js";
-import UserProfileScreen from "./screens/UserProfileScreen.js";
+import OtherUserProfileScreen from "./screens/OtherUserProfileScreen.jsx";
 import CommunitiesScreen from "./screens/CommunitiesScreen.jsx";
 import CommunityDetailScreen from "./screens/CommunityDetailScreen.jsx";
 import CreateCommunityScreen from "./screens/CreateCommunityScreen.jsx";
@@ -14,19 +14,14 @@ import CommunityFeedScreen from "./screens/CommunityFeedScreen.jsx";
 import CreateCommunityPostScreen from "./screens/CreateCommunityPostScreen.jsx";
 import CommunityAdminScreen from "./screens/CommunityAdminScreen.jsx";
 import SignUpScreen from "./screens/SignUp";
+
 import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { COLORS } from "./theme";
-import {
-  useState,
-  useEffect,
-  createContext,
-  useContext,
-  useReducer,
-} from "react";
+import { useEffect, createContext, useContext, useReducer } from "react";
 import { View, Text } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -53,10 +48,11 @@ function HomeStack() {
           headerTitleAlign: "center",
         }}
       />
+
       <Stack.Screen
-        name="UserProfile"
-        component={UserProfileScreen}
-        options={({ route }) => ({ title: route.params?.userName || "User Profile" })}
+        name="OtherUserProfile"
+        component={OtherUserProfileScreen}
+        options={{ title: "Profile" }}
       />
     </Stack.Navigator>
   );
@@ -118,10 +114,11 @@ function CommunityStack() {
         component={CreateCommunityScreen}
         options={{ title: "Start a Group" }}
       />
+
       <Stack.Screen
-        name="UserProfile"
-        component={UserProfileScreen}
-        options={({ route }) => ({ title: route.params?.userName || "User Profile" })}
+        name="OtherUserProfile"
+        component={OtherUserProfileScreen}
+        options={{ title: "Profile" }}
       />
     </Stack.Navigator>
   );
@@ -145,6 +142,12 @@ function ProfileStack() {
         name="EditProfile"
         component={EditProfileScreen}
         options={{ title: "Edit Profile" }}
+      />
+
+      <Stack.Screen
+        name="OtherUserProfile"
+        component={OtherUserProfileScreen}
+        options={{ title: "Profile" }}
       />
 
       <Stack.Screen
@@ -199,13 +202,19 @@ function FeedStack() {
       screenOptions={{
         headerStyle: { backgroundColor: COLORS.primary },
         headerTintColor: "#FFFFFF",
-        headerTitleAlign: 'left',
+        headerTitleAlign: "left",
       }}
     >
       <Stack.Screen
         name="FeedHome"
         component={FeedScreen}
         options={{ title: "Feed", headerShown: true }}
+      />
+
+      <Stack.Screen
+        name="OtherUserProfile"
+        component={OtherUserProfileScreen}
+        options={{ title: "Profile" }}
       />
     </Stack.Navigator>
   );
@@ -217,7 +226,7 @@ function PostStack() {
       screenOptions={{
         headerStyle: { backgroundColor: COLORS.primary },
         headerTintColor: "#FFFFFF",
-        headerTitleAlign: 'left',
+        headerTitleAlign: "left",
       }}
     >
       <Stack.Screen
@@ -225,13 +234,24 @@ function PostStack() {
         component={PostScreen}
         options={{ title: "Create Post", headerShown: true }}
       />
+
+      <Stack.Screen
+        name="OtherUserProfile"
+        component={OtherUserProfileScreen}
+        options={{ title: "Profile" }}
+      />
     </Stack.Navigator>
   );
 }
 
 function InboxStack() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: COLORS.primary },
+        headerTintColor: "#FFFFFF",
+      }}
+    >
       <Stack.Screen
         name="InboxHome"
         component={InboxScreen}
@@ -245,6 +265,12 @@ function InboxStack() {
           title: route.params?.threadName || "Chat",
           headerShown: false,
         })}
+      />
+
+      <Stack.Screen
+        name="OtherUserProfile"
+        component={OtherUserProfileScreen}
+        options={{ title: "Profile" }}
       />
     </Stack.Navigator>
   );
@@ -298,36 +324,19 @@ function AppStack() {
         tabBarInactiveTintColor: "#999",
       })}
     >
-      <Tab.Screen
-        name="Home"
-        component={HomeStack}
-        options={{ title: "Home" }}
-      />
-
-      <Tab.Screen
-        name="Feed"
-        component={FeedStack}
-        options={{ title: "Feed" }}
-      />
-
-      <Tab.Screen
-        name="Post"
-        component={PostStack}
-        options={{ title: "Post" }}
-      />
-
+      <Tab.Screen name="Home" component={HomeStack} options={{ title: "Home" }} />
+      <Tab.Screen name="Feed" component={FeedStack} options={{ title: "Feed" }} />
+      <Tab.Screen name="Post" component={PostStack} options={{ title: "Post" }} />
       <Tab.Screen
         name="Communities"
         component={CommunityStack}
         options={{ title: "Clubs" }}
       />
-
       <Tab.Screen
         name="Profile"
         component={ProfileStack}
         options={{ title: "Profile" }}
       />
-
       <Tab.Screen
         name="Inbox"
         component={InboxStack}
@@ -423,11 +432,14 @@ export const AuthProvider = ({ children }) => {
   const authContext = {
     signIn: async (username, password) => {
       try {
-        const response = await fetch(`${require("./config").SERVER_URL}/users/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, password }),
-        });
+        const response = await fetch(
+          `${require("./config").SERVER_URL}/users/login`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password }),
+          }
+        );
 
         const data = await response.json();
 
@@ -457,7 +469,14 @@ export const AuthProvider = ({ children }) => {
       }
     },
 
-    signUp: async (username, email, password, role, securityQuestion, securityAnswer) => {
+    signUp: async (
+      username,
+      email,
+      password,
+      role,
+      securityQuestion,
+      securityAnswer
+    ) => {
       try {
         const response = await fetch(`${require("./config").SERVER_URL}/users`, {
           method: "POST",
