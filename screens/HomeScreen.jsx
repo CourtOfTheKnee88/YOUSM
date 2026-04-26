@@ -31,13 +31,10 @@ export default function HomeScreen({ navigation }) {
             Discover clubs, explore people, and build your YOUSM profile in one place.
           </Text>
 
-          <Pressable style={styles.searchMock} onPress={() => navigation.navigate("Feed")}>
+          <View style={styles.searchMock}>
             <MaterialCommunityIcons name="magnify" size={20} color={COLORS.textLight} />
             <Text style={styles.searchMockText}>Search people, groups, and interests</Text>
-            <View style={styles.searchFilterButton}>
-              <MaterialCommunityIcons name="tune-variant" size={18} color="#FFFFFF" />
-            </View>
-          </Pressable>
+          </View>
         </View>
 
         <View style={styles.featuredCard}>
@@ -122,13 +119,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderRadius: 18,
     paddingLeft: 14,
-    paddingRight: 8,
+    paddingRight: 14,
     paddingVertical: 8,
     flexDirection: "row",
     alignItems: "center",
   },
   searchMockText: { flex: 1, color: COLORS.textLight, fontSize: 14, marginLeft: 8 },
-  searchFilterButton: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.primary, alignItems: "center", justifyContent: "center" },
   featuredCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: SPACING.largeRadius,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   StyleSheet,
   Text,
@@ -15,6 +15,7 @@ import {
   Share
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { SERVER_URL } from '../config';
 import { COLORS, SPACING } from '../theme';
 import { useAuth } from '../navigation';
@@ -58,9 +59,11 @@ export default function FeedScreen({ navigation }) {
     }
   };
 
-  useEffect(() => {
-    fetchFeed();
-  }, [userId]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchFeed();
+    }, [userId])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);

@@ -11,6 +11,7 @@ const MOCK_CONTACTS = ["James", "Courtney", "Esther", "JohnDoe"];
 export default function InboxScreen({ navigation }) {
   const [inboxChats, setInboxChats] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [userHandle, setUserHandle] = useState(null);
   
   // Modals
   const [modalVisible, setModalVisible] = useState(false);
@@ -47,8 +48,12 @@ export default function InboxScreen({ navigation }) {
 
     const loadCurrentUser = async () => {
       try {
-        const username = await AsyncStorage.getItem("username");
-        if (isMounted) setCurrentUser(username || null);
+        const [uid, name] = await Promise.all([
+          AsyncStorage.getItem("userId"),
+          AsyncStorage.getItem("username")
+        ]);
+        if (isMounted) setCurrentUser(uid || null);
+        if (isMounted) setUserHandle(name || null);
       } catch (error) {
         console.error("Failed to load current user:", error);
       }
@@ -187,7 +192,7 @@ export default function InboxScreen({ navigation }) {
       if (data.thread) {
         setModalVisible(false); setSelectedUsers([]); setGroupName("");
         navigation.navigate("Message", { 
-          currentUser,
+          currentUser: userHandle,
           targetUser: isGroup ? "group" : selectedUsers[0],
           targetDisplayName: data.thread.name || (isGroup ? "Group Chat" : selectedUsers[0]),
           threadId: data.thread.id
@@ -203,7 +208,12 @@ export default function InboxScreen({ navigation }) {
     return (
       <Pressable 
         style={styles.chatRow}
-        onPress={() => navigation.navigate("Message", { currentUser, targetUser: item.threadType === 'group' ? 'group' : item.targetUser, targetDisplayName: safeName, threadId: item.threadId })}
+        onPress={() => navigation.navigate("Message", { 
+          currentUser: userHandle, 
+          targetUser: item.threadType === 'group' ? 'group' : item.targetUser, 
+          targetDisplayName: safeName, 
+          threadId: item.threadId 
+        })}
         onLongPress={() => showChatOptions(item)}
       >
         <View style={styles.avatarPlaceholder}><Text style={styles.avatarInitial}>{displayInitial}</Text></View>

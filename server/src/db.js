@@ -239,7 +239,13 @@ function initializeDatabase() {
         name: "Software Engineering",
         type: "Course",
         category: "Class",
-        description: "Explore the outdoors with fellow students.",
+        description: "A course community for USM Software Engineering students to collaborate and discuss projects.",
+      },
+      {
+        name: "Campus Hiking Club",
+        type: "Club",
+        category: "Social",
+        description: "Explore the outdoors with fellow USM students.",
       },
       {
         name: "Chess Society",
@@ -262,7 +268,7 @@ function initializeDatabase() {
   const postCount = db.prepare("SELECT COUNT(*) as count FROM posts").get().count;
   if (postCount === 0) {
     const users = db.prepare("SELECT id, username FROM users").all();
-    const insertPost = db.prepare("INSERT INTO posts (authorId, content) VALUES (?, ?)");
+    const insertPost = db.prepare("INSERT INTO posts (authorId, content, createdAt) VALUES (?, ?, ?)");
 
     const usmPostsPool = [
       "Just grabbed a coffee at the Portland campus. Ready for my 9 AM! ☕",
@@ -330,7 +336,11 @@ function initializeDatabase() {
     users.forEach((user, userIdx) => {
       for (let i = 0; i < 10; i++) {
         const postContent = usmPostsPool[(userIdx * 10 + i) % usmPostsPool.length];
-        insertPost.run(user.id, postContent);
+        // Intermingle posts by spacing out timestamps based on user and post index.
+        // This ensures that when sorted by date, users appear interleaved in the feed.
+        const minutesAgo = (i * 30) + (userIdx * 5);
+        const timestamp = new Date(Date.now() - minutesAgo * 60 * 1000).toISOString();
+        insertPost.run(user.id, postContent, timestamp);
       }
     });
   }
@@ -345,15 +355,25 @@ function initializeDatabase() {
     const esther = users.find(u => u.username === 'esther');
     const gage = users.find(u => u.username === 'gage');
     const jane = users.find(u => u.username === 'janedoe');
+    const courtney = users.find(u => u.username === 'courtney');
+    const bob = users.find(u => u.username === 'bobsmith');
 
     const wic = comms.find(c => c.name === 'Women in Computing');
     const swe = comms.find(c => c.name === 'Software Engineering');
     const hike = comms.find(c => c.name === 'Campus Hiking Club');
+    const chess = comms.find(c => c.name === 'Chess Society');
 
-    if (esther && wic) db.prepare("INSERT INTO community_members (communityId, userId, role) VALUES (?, ?, 'admin')").run(wic.id, esther.id);
-    if (james && swe) db.prepare("INSERT INTO community_members (communityId, userId) VALUES (?, ?)").run(swe.id, james.id);
-    if (gage && hike) db.prepare("INSERT INTO community_members (communityId, userId) VALUES (?, ?)").run(hike.id, gage.id);
-    if (jane && swe) db.prepare("INSERT INTO community_members (communityId, userId, role) VALUES (?, ?, 'admin')").run(swe.id, jane.id);
+    const insertMember = db.prepare("INSERT INTO community_members (communityId, userId, role) VALUES (?, ?, ?)");
+
+    if (esther && wic) insertMember.run(wic.id, esther.id, 'admin');
+    if (courtney && wic) insertMember.run(wic.id, courtney.id, 'member');
+    if (james && swe) insertMember.run(swe.id, james.id, 'member');
+    if (gage && swe) insertMember.run(swe.id, gage.id, 'member');
+    if (jane && swe) insertMember.run(swe.id, jane.id, 'admin');
+    if (gage && hike) insertMember.run(hike.id, gage.id, 'member');
+    if (bob && hike) insertMember.run(hike.id, bob.id, 'member');
+    if (james && chess) insertMember.run(chess.id, james.id, 'member');
+    if (bob && chess) insertMember.run(chess.id, bob.id, 'member');
   }
 
   return db;
@@ -1175,8 +1195,13 @@ function getUserInbox(userId) {
       t.id as threadId,
       t.thread_type as threadType,
       CASE 
-        WHEN t.name IS NOT NULL THEN t.name
-        ELSE (SELECT GROUP_CONCAT(user_id, ', ') FROM thread_participants WHERE thread_id = t.id AND user_id != ?)
+        WHEN t.name IS NOT NULL AND t.name != '' THEN t.name
+        ELSE (
+          SELECT GROUP_CONCAT(COALESCE(u.displayName, u.username), ', ') 
+          FROM thread_participants tp
+          JOIN users u ON tp.user_id = u.id
+          WHERE tp.thread_id = t.id AND tp.user_id != ?
+        )
       END as targetUser,
       (SELECT content FROM messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) as lastMessage,
       (SELECT created_at FROM messages WHERE thread_id = t.id ORDER BY created_at DESC LIMIT 1) as lastMessageAt

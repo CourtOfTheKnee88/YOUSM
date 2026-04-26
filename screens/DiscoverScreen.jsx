@@ -42,8 +42,11 @@ export default function DiscoverScreen({ navigation }) {
         style={styles.resultCard}
         onPress={() => {
           if (isPerson) {
-            // Navigates to the Profile tab and passes the specific user ID
-            navigation.navigate("Profile", { screen: 'ProfileHome', params: { userId: item.id } });
+            // Navigates to the local ProfileHome route within the current stack
+            navigation.navigate("UserProfile", { 
+              userId: item.id,
+              userName: item.displayName || item.username 
+            });
           } else {
             navigation.navigate("CommunityDetail", { communityId: item.id });
           }

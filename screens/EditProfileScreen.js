@@ -9,10 +9,12 @@ import {
   Pressable,
   ActivityIndicator
 } from "react-native";
-import { SERVER_URL, CURRENT_USER_ID } from "../config";
+import { SERVER_URL } from "../config";
 import { COLORS, SPACING } from "../theme";
+import { useAuth } from "../navigation";
 
 export default function EditProfileScreen({ route, navigation }) {
+  const { userId: loggedInUserId } = useAuth();
   const { user } = route.params;
 
   const [displayName, setDisplayName] = useState(user.displayName || "");
@@ -33,7 +35,7 @@ export default function EditProfileScreen({ route, navigation }) {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${SERVER_URL}/users/${CURRENT_USER_ID}`, {
+      const res = await fetch(`${SERVER_URL}/users/${loggedInUserId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

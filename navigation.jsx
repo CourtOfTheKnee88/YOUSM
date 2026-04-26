@@ -6,6 +6,7 @@ import LoginScreen from "./screens/Login";
 import HomeScreen, { HeaderLogo } from "./screens/HomeScreen";
 import ProfileScreen from "./screens/ProfileScreen.js";
 import EditProfileScreen from "./screens/EditProfileScreen.js";
+import UserProfileScreen from "./screens/UserProfileScreen.js";
 import CommunitiesScreen from "./screens/CommunitiesScreen.jsx";
 import CommunityDetailScreen from "./screens/CommunityDetailScreen.jsx";
 import CreateCommunityScreen from "./screens/CreateCommunityScreen.jsx";
@@ -51,6 +52,11 @@ function HomeStack() {
           headerTitle: () => <HeaderLogo />,
           headerTitleAlign: "center",
         }}
+      />
+      <Stack.Screen
+        name="UserProfile"
+        component={UserProfileScreen}
+        options={({ route }) => ({ title: route.params?.userName || "User Profile" })}
       />
     </Stack.Navigator>
   );
@@ -111,6 +117,11 @@ function CommunityStack() {
         name="CreateCommunity"
         component={CreateCommunityScreen}
         options={{ title: "Start a Group" }}
+      />
+      <Stack.Screen
+        name="UserProfile"
+        component={UserProfileScreen}
+        options={({ route }) => ({ title: route.params?.userName || "User Profile" })}
       />
     </Stack.Navigator>
   );
@@ -334,6 +345,7 @@ const authReducer = (state, action) => {
         userToken: action.token,
         userId: action.userId,
         userRole: action.userRole,
+        username: action.username,
         isLoading: false,
       };
 
@@ -344,6 +356,7 @@ const authReducer = (state, action) => {
         userToken: action.token,
         userId: action.userId,
         userRole: action.userRole,
+        username: action.username,
         isLoading: false,
       };
 
@@ -354,6 +367,7 @@ const authReducer = (state, action) => {
         userToken: null,
         userId: null,
         userRole: null,
+        username: null,
         isLoading: false,
       };
 
@@ -375,6 +389,7 @@ export const AuthProvider = ({ children }) => {
     userToken: null,
     userId: null,
     userRole: null,
+    username: null,
   });
 
   useEffect(() => {
@@ -383,6 +398,7 @@ export const AuthProvider = ({ children }) => {
         const token = await AsyncStorage.getItem("userToken");
         const userId = await AsyncStorage.getItem("userId");
         const userRole = await AsyncStorage.getItem("userRole");
+        const username = await AsyncStorage.getItem("username");
 
         if (token) {
           dispatch({
@@ -390,6 +406,7 @@ export const AuthProvider = ({ children }) => {
             token,
             userId,
             userRole,
+            username,
           });
         } else {
           dispatch({ type: "REST" });
@@ -430,6 +447,7 @@ export const AuthProvider = ({ children }) => {
           token,
           userId: data.user.id.toString(),
           userRole: data.user.role,
+          username: data.user.username,
         });
 
         return true;
@@ -472,6 +490,7 @@ export const AuthProvider = ({ children }) => {
           token,
           userId: data.user.id.toString(),
           userRole: data.user.role,
+          username: data.user.username,
         });
 
         return true;

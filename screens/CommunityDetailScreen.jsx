@@ -262,7 +262,19 @@ export default function CommunityDetailScreen({ route, navigation }) {
           <Text style={styles.sectionTitle}>Community Members</Text>
           {members.map((member) => (
             <View key={member.userId} style={styles.memberRow}>
-              <View style={styles.memberInfo}>
+              <Pressable 
+                style={({ pressed }) => [styles.memberInfo, { opacity: pressed ? 0.7 : 1 }]}
+                onPress={() => {
+                  if (member.userId === parseInt(userId)) {
+                    navigation.navigate("Profile");
+                  } else {
+                    navigation.navigate("UserProfile", { 
+                      userId: member.userId,
+                      userName: member.displayName || member.username 
+                    });
+                  }
+                }}
+              >
                 <View style={styles.memberAvatar}>
                   <Text style={styles.avatarText}>
                     {member.displayName?.charAt(0) || member.username?.charAt(0) || "?"}
@@ -274,7 +286,7 @@ export default function CommunityDetailScreen({ route, navigation }) {
                     {member.role === 'admin' ? 'Community Admin' : 'Member'}
                   </Text>
                 </View>
-              </View>
+              </Pressable>
               
               {member.userId !== parseInt(userId) && (
                 <Pressable 
