@@ -183,19 +183,21 @@ function initializeDatabase() {
 
   // Insert test users if they don't exist
   const testUsers = [
-    { username: "james", displayName: "James" },
-    { username: "gage", displayName: "Gage" },
-    { username: "courtney", displayName: "Courtney" },
-    { username: "esther", displayName: "Esther" },
+    { username: "james", displayName: "James Tedder", email: "james.tedder@maine.edu", password: "password123", role: "Student" },
+    { username: "gage", displayName: "Gage", email: "gage@maine.edu", password: "password123", role: "Student" },
+    { username: "courtney", displayName: "Courtney", email: "courtney@maine.edu", password: "password123", role: "Student" },
+    { username: "esther", displayName: "Esther Greene", email: "esther.greene@maine.edu", password: "password123", role: "Student" },
+    { username: "janedoe", displayName: "Jane Doe", email: "jane.doe@maine.edu", password: "password123", role: "Faculty" },
+    { username: "bobsmith", displayName: "Bob Smith", email: "bob.smith@alumni.maine.edu", password: "password123", role: "Alumni" },
   ];
 
   testUsers.forEach((user) => {
     try {
       db.prepare(
         `
-        INSERT INTO users (username, displayName) VALUES (?, ?)
+        INSERT INTO users (username, displayName, email, password, role) VALUES (?, ?, ?, ?, ?)
       `,
-      ).run(user.username, user.displayName);
+      ).run(user.username, user.displayName, user.email, user.password, user.role);
     } catch (e) {
       // User already exists
     }
@@ -211,8 +213,7 @@ function initializeDatabase() {
         name: "Women in Computing",
         type: "Club",
         category: "Academic",
-        description:
-          "A supportive space for students interested in technology.",
+        description: "A supportive space for USM students interested in technology and computing.",
       },
       {
         name: "Software Engineering",
@@ -239,6 +240,104 @@ function initializeDatabase() {
     initialCommunities.forEach((c) => {
       insert.run(c.name, c.type, c.category, c.description);
     });
+  }
+
+  // Seed test posts if none exist
+  const postCount = db.prepare("SELECT COUNT(*) as count FROM posts").get().count;
+  if (postCount === 0) {
+    const users = db.prepare("SELECT id, username FROM users").all();
+    const insertPost = db.prepare("INSERT INTO posts (authorId, content) VALUES (?, ?)");
+
+    const usmPostsPool = [
+      "Just grabbed a coffee at the Portland campus. Ready for my 9 AM! ☕",
+      "Who's going to the Huskies game this weekend? Let's go USM! 🐾",
+      "Study session at Glickman Library later today. Join me on the 4th floor! 📚",
+      "The Gorham campus is looking beautiful this autumn. #USMLife",
+      "Can anyone recommend a good elective for next semester? Thinking about something in the Arts.",
+      "Excited to join the Women in Computing club meeting tonight! 💻",
+      "Does anyone know if the Husky Bus from Portland to Gorham is running on time today? 🚌",
+      "Just finished my Software Engineering project. Feeling accomplished! #CS",
+      "Looking for teammates for the USM intramural soccer league. DM me! ⚽",
+      "First day at the University of Southern Maine! So happy to be a Husky.",
+      "The view of the White Mountains from the Gorham campus today is incredible. 🏔️",
+      "Heading to the Costello Sports Complex for a quick workout. Huskies stay fit! 💪",
+      "Thinking of checking out the art exhibit in the Woodbury Campus Center.",
+      "Is the McGoldrick Center open for late-night study sessions this week?",
+      "Portland campus parking is a struggle this morning. Start early, everyone! 🚗",
+      "Great lecture today on cybersecurity. USM faculty are really top-notch.",
+      "Does anyone have the notes from Bio 101 last Friday? I was out sick. 🤒",
+      "The Portland Commons is finally feeling like home. Loving the new dorms!",
+      "If you haven't checked out the Glickman Library special collections, you're missing out!",
+      "Who wants to start a weekly board game night at the Brooks Student Center? 🎲",
+      "Just finished a great workout at the Sullivan Gym. Feeling energized!",
+      "Attending the USM Career Fair today. So many great Maine companies here.",
+      "First snowfall in Gorham! Be careful on the roads, fellow Huskies. ❄️",
+      "Can't believe I'm graduating from USM this year. It's been an amazing journey.",
+      "Thinking of joining the Student Government Association. Anyone have experience?",
+      "The pizza at the Gorham dining hall is actually pretty good today. 🍕",
+      "Anyone want to go for a run on the trails behind the Gorham campus?",
+      "Portland vs. Gorham—which campus has the better vibes? Discuss!",
+      "Huskies win! 🐾 What a great game against UMaine tonight.",
+      "Looking for a used copy of the Chemistry 102 textbook. USM Bookstore is pricey!",
+      "I love that we have a dedicated Makerspace on campus. Testing out the 3D printers today.",
+      "Anyone in the Nursing program? Looking for some study tips for clinicals.",
+      "Found a lost set of keys near the Portland skywalk. Turning them into campus safety.",
+      "Can't wait for the Spring Fling event! USM knows how to throw a party.",
+      "Is anyone doing the exchange program next semester? Thinking about Ireland.",
+      "The new Osher Map Library exhibit is fantastic. Highly recommend a visit.",
+      "Anyone else having trouble with the USM WiFi in the science building?",
+      "Just joined the USM Hiking Club. Katahdin here we come! 🥾",
+      "Why is the Portland campus always so windy? 💨 Stay warm, everyone!",
+      "Shoutout to the USM Writing Center for helping me with my capstone draft.",
+      "Is the gym open on holiday Mondays? Need to keep the routine going.",
+      "Anyone want to grab a bite at the Great Lost Bear after class in Portland? 🍔",
+      "USM Huskies pride! Just got my new hoodie from the campus shop.",
+      "Does the library have any private study rooms available for booking tonight?",
+      "Thinking of starting a USM Chess Society. Any grandmasters out there?",
+      "Just saw a beautiful sunset from the top floor of Glickman. Love this city.",
+      "Working on my thesis in the Lewiston-Auburn campus library. Very quiet here!",
+      "How do I apply for the USM Foundation scholarships? Deadline is coming up.",
+      "Met some great alumni at the networking event tonight. USM family is strong.",
+      "The USM music department is having a concert tonight. Let's support our peers! 🎺",
+      "Taking my first class at the L.A. campus next week. Any tips for the commute?",
+      "I wish the Portland campus had more green space, but I love being in the city.",
+      "Gorham Husky here! Looking for Portland campus friends for lunch next Tuesday.",
+      "Who's excited for the USM theatre department's new play? Tickets are on sale.",
+      "Does USM have a photography club? I've been taking some shots around Casco Bay.",
+      "Need a tutor for Calculus II. Math is not my friend this semester. 📐",
+      "Just walked the Maine narrow gauge railroad trail. Beautiful afternoon in Portland.",
+      "USM Spartans... no wait, Huskies! Old habits from my previous school die hard.",
+      "The Glickman Library is the best place for serious focus. Headphones on, world off.",
+      "What's your favorite local spot to eat near the USM Portland campus? 🥪"
+    ];
+
+    users.forEach((user, userIdx) => {
+      for (let i = 0; i < 10; i++) {
+        const postContent = usmPostsPool[(userIdx * 10 + i) % usmPostsPool.length];
+        insertPost.run(user.id, postContent);
+      }
+    });
+  }
+
+  // Seed community memberships if none exist
+  const memberCount = db.prepare("SELECT COUNT(*) as count FROM community_members").get().count;
+  if (memberCount === 0) {
+    const users = db.prepare("SELECT id, username FROM users").all();
+    const comms = db.prepare("SELECT id, name FROM communities").all();
+    
+    const james = users.find(u => u.username === 'james');
+    const esther = users.find(u => u.username === 'esther');
+    const gage = users.find(u => u.username === 'gage');
+    const jane = users.find(u => u.username === 'janedoe');
+
+    const wic = comms.find(c => c.name === 'Women in Computing');
+    const swe = comms.find(c => c.name === 'Software Engineering');
+    const hike = comms.find(c => c.name === 'Campus Hiking Club');
+
+    if (esther && wic) db.prepare("INSERT INTO community_members (communityId, userId, role) VALUES (?, ?, 'admin')").run(wic.id, esther.id);
+    if (james && swe) db.prepare("INSERT INTO community_members (communityId, userId) VALUES (?, ?)").run(swe.id, james.id);
+    if (gage && hike) db.prepare("INSERT INTO community_members (communityId, userId) VALUES (?, ?)").run(hike.id, gage.id);
+    if (jane && swe) db.prepare("INSERT INTO community_members (communityId, userId, role) VALUES (?, ?, 'admin')").run(swe.id, jane.id);
   }
 
   return db;

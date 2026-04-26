@@ -119,7 +119,13 @@ function ProfileStack() {
 // Home Stack
 function FeedStack() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: COLORS.primary },
+        headerTintColor: "#FFFFFF",
+        headerTitleAlign: 'left',
+      }}
+    >
       <Stack.Screen
         name="FeedHome"
         component={FeedScreen}
@@ -132,7 +138,13 @@ function FeedStack() {
 // Post Stack
 function PostStack() {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: COLORS.primary },
+        headerTintColor: "#FFFFFF",
+        headerTitleAlign: 'left',
+      }}
+    >
       <Stack.Screen
         name="CreatePost"
         component={PostScreen}
