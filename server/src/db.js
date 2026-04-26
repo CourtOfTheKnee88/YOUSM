@@ -171,7 +171,7 @@ function initializeDatabase() {
 
     CREATE TABLE IF NOT EXISTS thread_participants (
       thread_id INTEGER NOT NULL,
-      user_id TEXT NOT NULL,
+      user_id INTEGER NOT NULL,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (thread_id, user_id),
       FOREIGN KEY (thread_id) REFERENCES threads(id) ON DELETE CASCADE
@@ -180,7 +180,7 @@ function initializeDatabase() {
     CREATE TABLE IF NOT EXISTS messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       thread_id INTEGER NOT NULL,
-      sender_id TEXT NOT NULL,
+      sender_id INTEGER NOT NULL,
       content TEXT,
       media_url TEXT,
       media_type TEXT,
@@ -189,8 +189,8 @@ function initializeDatabase() {
     );
 
     CREATE TABLE IF NOT EXISTS blocks (
-      blocker_id TEXT NOT NULL,
-      blocked_id TEXT NOT NULL,
+      blocker_id INTEGER NOT NULL,
+      blocked_id INTEGER NOT NULL,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (blocker_id, blocked_id)
     );
