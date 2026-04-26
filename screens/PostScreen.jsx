@@ -14,11 +14,13 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useVideoPlayer, VideoView } from 'expo-video';
-import { SERVER_URL, CURRENT_USER_ID } from '../config';
+import { SERVER_URL } from '../config';
 import { COLORS, SPACING } from '../theme';
+import { useAuth } from '../navigation';
 
 
 export default function PostScreen({ navigation }) {
+  const { userId } = useAuth();
   const [content, setContent] = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedVideo, setSelectedVideo] = useState(null);
@@ -59,8 +61,13 @@ export default function PostScreen({ navigation }) {
     setLoading(true);
 
     try {
+      if (!userId) {
+        throw new Error('User session not found. Please log in again.');
+      }
+
       const formData = new FormData();
-      formData.append('authorId', CURRENT_USER_ID.toString());
+      formData.append('authorId', userId.toString());
+
       if (content.trim()) formData.append('content', content.trim());
 
       const selectedMedia = selectedImage || selectedVideo;

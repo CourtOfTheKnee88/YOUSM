@@ -22,6 +22,8 @@ export default function CommunityDetailScreen({ route, navigation }) {
   const [community, setCommunity] = useState(null);
   const [joined, setJoined] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [members, setMembers] = useState([]);
+  const [followingMap, setFollowingMap] = useState({});
 
   const fetchDetails = async () => {
     if (!userId) {
@@ -30,14 +32,31 @@ export default function CommunityDetailScreen({ route, navigation }) {
     }
 
     try {
-      const res = await fetch(
-        `${SERVER_URL}/communities/${communityId}?userId=${userId}`
-      );
-      const data = await res.json();
+      const [commRes, membersRes, followingRes] = await Promise.all([
+        fetch(`${SERVER_URL}/communities/${communityId}?userId=${userId}`),
+        fetch(`${SERVER_URL}/communities/${communityId}/members`),
+        fetch(`${SERVER_URL}/users/${userId}/following`)
+      ]);
 
-      if (data.community) {
-        setCommunity(data.community);
-        setJoined(data.community.isMember);
+      const commData = await commRes.json();
+      const membersData = await membersRes.json();
+      const followingData = await followingRes.json();
+
+      if (commData.community) {
+        setCommunity(commData.community);
+        setJoined(commData.community.isMember);
+      }
+
+      if (membersData.members) {
+        setMembers(membersData.members);
+      }
+
+      if (followingData.following) {
+        const map = {};
+        followingData.following.forEach(f => {
+          map[f.id] = true;
+        });
+        setFollowingMap(map);
       }
     } catch (error) {
       console.error("Failed to load community details:", error);
@@ -104,6 +123,28 @@ export default function CommunityDetailScreen({ route, navigation }) {
     } catch (error) {
       console.error("Error toggling join:", error);
       Alert.alert("Error", error.message || "Could not update membership.");
+    }
+  };
+
+  const toggleFollowMember = async (targetUserId) => {
+    try {
+      const res = await fetch(`${SERVER_URL}/users/${targetUserId}/follow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ followerId: userId })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setFollowingMap(prev => ({
+          ...prev,
+          [targetUserId]: data.following
+        }));
+      } else {
+        Alert.alert("Error", data.error || "Failed to update follow status");
+      }
+    } catch (error) {
+      console.error("Follow error:", error);
+      Alert.alert("Error", "Network request failed");
     }
   };
 
@@ -215,6 +256,41 @@ export default function CommunityDetailScreen({ route, navigation }) {
               feed.
             </Text>
           )}
+        </View>
+
+        <View style={styles.membersSection}>
+          <Text style={styles.sectionTitle}>Community Members</Text>
+          {members.map((member) => (
+            <View key={member.userId} style={styles.memberRow}>
+              <View style={styles.memberInfo}>
+                <View style={styles.memberAvatar}>
+                  <Text style={styles.avatarText}>
+                    {member.displayName?.charAt(0) || member.username?.charAt(0) || "?"}
+                  </Text>
+                </View>
+                <View>
+                  <Text style={styles.memberName}>{member.displayName || member.username}</Text>
+                  <Text style={styles.memberRoleBadge}>
+                    {member.role === 'admin' ? 'Community Admin' : 'Member'}
+                  </Text>
+                </View>
+              </View>
+              
+              {member.userId !== parseInt(userId) && (
+                <Pressable 
+                  style={[
+                    styles.followBtn, 
+                    followingMap[member.userId] && styles.followingBtn
+                  ]}
+                  onPress={() => toggleFollowMember(member.userId)}
+                >
+                  <Text style={[styles.followBtnText, followingMap[member.userId] && styles.followingBtnText]}>
+                    {followingMap[member.userId] ? "Following" : "Follow"}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -360,4 +436,49 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
+  membersSection: {
+    marginTop: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: COLORS.primary,
+    marginBottom: 16,
+  },
+  memberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: COLORS.surface,
+    padding: 12,
+    borderRadius: 16,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  memberInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  memberAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  avatarText: { color: "#FFF", fontWeight: 'bold', fontSize: 16 },
+  memberName: { fontSize: 15, fontWeight: '700', color: COLORS.text },
+  memberRoleBadge: { fontSize: 12, color: COLORS.textLight, marginTop: 1 },
+  followBtn: { backgroundColor: COLORS.primary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  followingBtn: { 
+    backgroundColor: COLORS.secondary, 
+    borderWidth: 1, 
+    borderColor: COLORS.primary 
+  },
+  followBtnText: { color: "#FFF", fontWeight: '700', fontSize: 12 },
+  followingBtnText: { color: COLORS.primary },
 });

@@ -15,11 +15,13 @@ import {
   Share
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { SERVER_URL, CURRENT_USER_ID } from '../config';
+import { SERVER_URL } from '../config';
 import { COLORS, SPACING } from '../theme';
+import { useAuth } from '../navigation';
 
 
 export default function FeedScreen({ navigation }) {
+  const { userId } = useAuth();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -31,8 +33,10 @@ export default function FeedScreen({ navigation }) {
   const [loadingComments, setLoadingComments] = useState(false);
 
   const fetchFeed = async () => {
+    if (!userId) return;
+    
     try {
-      const res = await fetch(`${SERVER_URL}/posts/feed/${CURRENT_USER_ID}`);
+      const res = await fetch(`${SERVER_URL}/posts/feed/${userId}`);
       const data = await res.json();
 
       if (data.posts) {
@@ -56,7 +60,7 @@ export default function FeedScreen({ navigation }) {
 
   useEffect(() => {
     fetchFeed();
-  }, []);
+  }, [userId]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -69,7 +73,7 @@ export default function FeedScreen({ navigation }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: CURRENT_USER_ID,
+          userId: userId,
           type: 'like'
         })
       });
@@ -119,7 +123,7 @@ export default function FeedScreen({ navigation }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: CURRENT_USER_ID,
+          userId: userId,
           type: 'comment',
           content: commentText.trim()
         })
@@ -151,7 +155,7 @@ export default function FeedScreen({ navigation }) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: CURRENT_USER_ID,
+            userId: userId,
             type: 'share'
           })
         });
@@ -168,6 +172,38 @@ export default function FeedScreen({ navigation }) {
     } catch (error) {
       console.error('Error sharing post:', error);
     }
+  };
+
+  const handleDeletePost = async (postId) => {
+    Alert.alert(
+      "Delete Post",
+      "Are you sure you want to delete this post permanently?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive", 
+          onPress: async () => {
+            try {
+              const res = await fetch(`${SERVER_URL}/posts/${postId}`, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: userId })
+              });
+
+              if (res.ok) {
+                setPosts(prev => prev.filter(p => p.id !== postId));
+              } else {
+                const data = await res.json();
+                Alert.alert('Error', data.error || 'Failed to delete post');
+              }
+            } catch (error) {
+              console.error('Delete error:', error);
+            }
+          }
+        }
+      ]
+    );
   };
 
   const renderPost = ({ item }) => {
@@ -190,8 +226,8 @@ export default function FeedScreen({ navigation }) {
               </Text>
             </View>
           </View>
-          {item.authorId === CURRENT_USER_ID && (
-            <Pressable>
+          {item.authorId?.toString() === userId?.toString() && (
+            <Pressable onPress={() => handleDeletePost(item.id)}>
               <Ionicons name="ellipsis-vertical" size={24} color={COLORS.primary} />
             </Pressable>
           )}
