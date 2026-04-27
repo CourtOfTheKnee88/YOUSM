@@ -74,7 +74,7 @@ export default function ProfileScreen({ navigation }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action }),
-        }
+        },
       );
 
       const data = await res.json();
@@ -84,7 +84,7 @@ export default function ProfileScreen({ navigation }) {
       }
 
       setFollowRequests((prev) =>
-        prev.filter((request) => request.id !== requestId)
+        prev.filter((request) => request.id !== requestId),
       );
 
       fetchProfile();
@@ -99,7 +99,7 @@ export default function ProfileScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       fetchProfile();
-    }, [userId])
+    }, [userId]),
   );
 
   useEffect(() => {
@@ -229,15 +229,23 @@ export default function ProfileScreen({ navigation }) {
         <Text style={styles.bioText}>{user.bio || "No bio yet."}</Text>
 
         <View style={styles.statsRow}>
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>{user.followerCount || 0}</Text>
-            <Text style={styles.statLabel}>Followers</Text>
-          </View>
+          <Pressable
+            onPress={() => navigation.navigate("FollowList", { userId })}
+          >
+            <View style={styles.statBox}>
+              <Text style={styles.statNumber}>{user.followerCount || 0}</Text>
+              <Text style={styles.statLabel}>Followers</Text>
+            </View>
+          </Pressable>
 
-          <View style={styles.statBox}>
-            <Text style={styles.statNumber}>{user.followingCount || 0}</Text>
-            <Text style={styles.statLabel}>Following</Text>
-          </View>
+          <Pressable
+            onPress={() => navigation.navigate("FollowList", { userId })}
+          >
+            <View style={styles.statBox}>
+              <Text style={styles.statNumber}>{user.followingCount || 0}</Text>
+              <Text style={styles.statLabel}>Following</Text>
+            </View>
+          </Pressable>
         </View>
 
         <Pressable
@@ -269,7 +277,7 @@ export default function ProfileScreen({ navigation }) {
                   ) : (
                     <Text style={styles.requestAvatarText}>
                       {(request.displayName || request.username || "U").charAt(
-                        0
+                        0,
                       )}
                     </Text>
                   )}
@@ -363,7 +371,9 @@ export default function ProfileScreen({ navigation }) {
             </Pressable>
           ))
         ) : (
-          <Text style={styles.infoLine}>You have not joined any communities yet.</Text>
+          <Text style={styles.infoLine}>
+            You have not joined any communities yet.
+          </Text>
         )}
       </InfoCard>
 
@@ -470,6 +480,7 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: "row",
+    justifyContent: "center",
     gap: 12,
     width: "100%",
     marginTop: 16,
@@ -479,7 +490,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
     borderRadius: 18,
-    padding: 12,
+    padding: 20,
     alignItems: "center",
   },
   statNumber: {

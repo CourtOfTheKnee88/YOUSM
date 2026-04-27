@@ -15,6 +15,7 @@ import CommunityFeedScreen from "./screens/CommunityFeedScreen.jsx";
 import CreateCommunityPostScreen from "./screens/CreateCommunityPostScreen.jsx";
 import CommunityAdminScreen from "./screens/CommunityAdminScreen.jsx";
 import SignUpScreen from "./screens/SignUp";
+import FollowList from "./screens/FollowList.jsx";
 
 import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
@@ -59,8 +60,7 @@ function HomeStack() {
       <Stack.Screen
         name="Discover"
         component={DiscoverScreen}
-        options={{ title: "Search" }}
-        options={{ headerBackTitle: "Back" }}
+        options={{ title: "Search", headerBackTitle: "Back" }}
       />
 
       <Stack.Screen
@@ -150,6 +150,12 @@ function ProfileStack() {
         name="ProfileHome"
         component={ProfileScreen}
         options={{ title: "My Profile" }}
+      />
+
+      <Stack.Screen
+        name="FollowList"
+        component={FollowList}
+        options={{ title: "Follow List", headerBackTitle: "Back" }}
       />
 
       <Stack.Screen
