@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const Database = require("better-sqlite3");
+const bcrypt = require("bcryptjs");
 
 const dataDir = path.join(__dirname, "..", "data");
 const dbPath = path.join(dataDir, "yousm.db");
@@ -17,7 +18,7 @@ function addColumnIfMissing(db, tableName, columnName, columnDefinition) {
 
   if (!exists) {
     db.exec(
-      `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefinition}`
+      `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnDefinition}`,
     );
   }
 }
@@ -202,6 +203,40 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_follow_requests_lookup ON follow_requests(requesterId, requestedId, status);
   `);
 
+  // Migration: Upgrade any existing plain-text credentials to hashed versions
+  const migrateCredentials = (database) => {
+    const users = database
+      .prepare("SELECT id, password, securityQA FROM users")
+      .all();
+    const updateStmt = database.prepare(
+      "UPDATE users SET password = ?, securityQA = ? WHERE id = ?",
+    );
+    const bcryptRegex = /^\$2[ayb]\$.{56}$/; // Standard bcrypt hash format
+
+    database.transaction(() => {
+      for (const user of users) {
+        let newPassword = user.password;
+        let newQA = user.securityQA;
+        let needsUpdate = false;
+
+        if (user.password && !bcryptRegex.test(user.password)) {
+          newPassword = bcrypt.hashSync(user.password, 10);
+          needsUpdate = true;
+        }
+
+        if (user.securityQA && !bcryptRegex.test(user.securityQA)) {
+          newQA = bcrypt.hashSync(user.securityQA.toLowerCase(), 10);
+          needsUpdate = true;
+        }
+
+        if (needsUpdate) {
+          updateStmt.run(newPassword, newQA, user.id);
+          console.log(`[Migration] Credentials hashed for user: ${user.id}`);
+        }
+      }
+    })();
+  };
+
   const testUsers = [
     {
       username: "james",
@@ -249,22 +284,26 @@ function initializeDatabase() {
 
   testUsers.forEach((user) => {
     try {
+      const hashedPassword = bcrypt.hashSync(user.password, 10);
       db.prepare(
         `
         INSERT INTO users (username, displayName, email, password, role)
         VALUES (?, ?, ?, ?, ?)
-      `
+      `,
       ).run(
         user.username,
         user.displayName,
         user.email,
-        user.password,
-        user.role
+        hashedPassword,
+        user.role,
       );
     } catch (error) {
       // User already exists.
     }
   });
+
+  // Run the migration to ensure all legacy plain-text data is secured
+  migrateCredentials(db);
 
   const commCount = db
     .prepare("SELECT COUNT(*) as count FROM communities")
@@ -294,7 +333,7 @@ function initializeDatabase() {
     ];
 
     const insert = db.prepare(
-      "INSERT INTO communities (name, type, category, description) VALUES (?, ?, ?, ?)"
+      "INSERT INTO communities (name, type, category, description) VALUES (?, ?, ?, ?)",
     );
 
     initialCommunities.forEach((community) => {
@@ -302,18 +341,19 @@ function initializeDatabase() {
         community.name,
         community.type,
         community.category,
-        community.description
+        community.description,
       );
     });
   }
 
-  const postCount = db.prepare("SELECT COUNT(*) as count FROM posts").get()
-    .count;
+  const postCount = db
+    .prepare("SELECT COUNT(*) as count FROM posts")
+    .get().count;
 
   if (postCount === 0) {
     const users = db.prepare("SELECT id, username FROM users").all();
     const insertPost = db.prepare(
-      "INSERT INTO posts (authorId, content) VALUES (?, ?)"
+      "INSERT INTO posts (authorId, content) VALUES (?, ?)",
     );
 
     const posts = [
@@ -343,12 +383,14 @@ const db = initializeDatabase();
 
 function normalizeUserIds(input) {
   const userIds = Array.isArray(input) ? input : [];
-  const filtered = userIds.map((userId) => String(userId).trim()).filter(Boolean);
+  const filtered = userIds
+    .map((userId) => String(userId).trim())
+    .filter(Boolean);
   const unique = [...new Set(filtered)];
 
   if (unique.length !== 2) {
     const error = new Error(
-      "A direct thread requires exactly two unique participant IDs."
+      "A direct thread requires exactly two unique participant IDs.",
     );
     error.statusCode = 400;
     throw error;
@@ -376,7 +418,7 @@ function serializeThread(thread) {
 
   const participants = db
     .prepare(
-      `SELECT user_id FROM thread_participants WHERE thread_id = ? ORDER BY user_id ASC`
+      `SELECT user_id FROM thread_participants WHERE thread_id = ? ORDER BY user_id ASC`,
     )
     .all(thread.id)
     .map((row) => row.user_id);
@@ -404,7 +446,7 @@ function getUserById(userId) {
         (SELECT COUNT(*) FROM followers WHERE followerId = users.id) as followingCount
       FROM users
       WHERE id = ?
-    `
+    `,
     )
     .get(userId);
 }
@@ -430,7 +472,7 @@ function getAllUsers() {
         (SELECT COUNT(*) FROM followers WHERE followerId = users.id) as followingCount
       FROM users
       ORDER BY COALESCE(displayName, username)
-    `
+    `,
     )
     .all();
 }
@@ -483,7 +525,7 @@ function updateUser(userId, data) {
       profileImage = ?,
       isPrivate = ?
     WHERE id = ?
-  `
+  `,
   ).run(
     updated.displayName,
     updated.bio,
@@ -500,7 +542,7 @@ function updateUser(userId, data) {
     updated.role,
     updated.profileImage,
     updated.isPrivate,
-    userId
+    userId,
   );
 
   return getUserById(userId);
@@ -509,7 +551,7 @@ function updateUser(userId, data) {
 function updateUserProfileImage(userId, profileImage) {
   db.prepare(`UPDATE users SET profileImage = ? WHERE id = ?`).run(
     profileImage,
-    userId
+    userId,
   );
 
   return getUserById(userId);
@@ -521,7 +563,7 @@ function createUser(
   password,
   role = "Student",
   securityQuestion = null,
-  securityAnswer = null
+  securityAnswer = null,
 ) {
   const stmt = db.prepare(`
     INSERT INTO users (
@@ -544,7 +586,7 @@ function createUser(
     role,
     securityQuestion,
     securityAnswer,
-    username
+    username,
   );
 
   return getUserById(result.lastInsertRowid);
@@ -564,7 +606,7 @@ function isFollowing(followerId, followingId) {
       `
       SELECT id FROM followers
       WHERE followerId = ? AND followingId = ?
-    `
+    `,
     )
     .get(followerId, followingId);
 
@@ -580,7 +622,7 @@ function getPendingFollowRequest(requesterId, requestedId) {
       WHERE requesterId = ?
         AND requestedId = ?
         AND status = 'pending'
-    `
+    `,
     )
     .get(requesterId, requestedId);
 }
@@ -632,7 +674,7 @@ function requestOrFollowUser(requesterId, requestedId) {
         `
         INSERT INTO follow_requests (requesterId, requestedId, status)
         VALUES (?, ?, 'pending')
-      `
+      `,
       )
       .run(requesterId, requestedId);
 
@@ -647,7 +689,7 @@ function requestOrFollowUser(requesterId, requestedId) {
     `
     INSERT OR IGNORE INTO followers (followerId, followingId)
     VALUES (?, ?)
-  `
+  `,
   ).run(requesterId, requestedId);
 
   return { status: "following", following: true };
@@ -658,14 +700,14 @@ function unfollowUser(followerId, followingId) {
     `
     DELETE FROM followers
     WHERE followerId = ? AND followingId = ?
-  `
+  `,
   ).run(followerId, followingId);
 
   db.prepare(
     `
     DELETE FROM follow_requests
     WHERE requesterId = ? AND requestedId = ? AND status = 'pending'
-  `
+  `,
   ).run(followerId, followingId);
 
   return { status: "none", following: false };
@@ -699,7 +741,7 @@ function getIncomingFollowRequests(userId) {
       WHERE fr.requestedId = ?
         AND fr.status = 'pending'
       ORDER BY datetime(fr.createdAt) DESC
-    `
+    `,
     )
     .all(userId);
 }
@@ -711,7 +753,7 @@ function respondToFollowRequest(requestId, requestedId, action) {
       SELECT *
       FROM follow_requests
       WHERE id = ? AND requestedId = ? AND status = 'pending'
-    `
+    `,
     )
     .get(requestId, requestedId);
 
@@ -727,7 +769,7 @@ function respondToFollowRequest(requestId, requestedId, action) {
         `
         INSERT OR IGNORE INTO followers (followerId, followingId)
         VALUES (?, ?)
-      `
+      `,
       ).run(request.requesterId, request.requestedId);
 
       db.prepare(
@@ -735,7 +777,7 @@ function respondToFollowRequest(requestId, requestedId, action) {
         UPDATE follow_requests
         SET status = 'accepted', updatedAt = CURRENT_TIMESTAMP
         WHERE id = ?
-      `
+      `,
       ).run(requestId);
     });
 
@@ -750,7 +792,7 @@ function respondToFollowRequest(requestId, requestedId, action) {
       UPDATE follow_requests
       SET status = 'denied', updatedAt = CURRENT_TIMESTAMP
       WHERE id = ?
-    `
+    `,
     ).run(requestId);
 
     return { success: true, status: "denied" };
@@ -770,7 +812,7 @@ function getFollowers(userId) {
       JOIN users u ON f.followerId = u.id
       WHERE f.followingId = ?
       ORDER BY f.createdAt DESC
-    `
+    `,
     )
     .all(userId);
 }
@@ -784,7 +826,7 @@ function getFollowing(userId) {
       JOIN users u ON f.followingId = u.id
       WHERE f.followerId = ?
       ORDER BY f.createdAt DESC
-    `
+    `,
     )
     .all(userId);
 }
@@ -843,7 +885,7 @@ function getPostsByUserId(userId) {
       WHERE p.authorId = ?
         AND p.communityId IS NULL
       ORDER BY datetime(p.createdAt) DESC
-    `
+    `,
     )
     .all(userId);
 }
@@ -873,7 +915,7 @@ function searchUsersAndCommunities(query) {
         OR major LIKE ?
       ORDER BY COALESCE(displayName, username)
       LIMIT 20
-    `
+    `,
     )
     .all(searchTerm, searchTerm, searchTerm, searchTerm);
 
@@ -900,7 +942,7 @@ function searchUsersAndCommunities(query) {
         OR c.description LIKE ?
       ORDER BY c.name
       LIMIT 20
-    `
+    `,
     )
     .all(searchTerm, searchTerm, searchTerm, searchTerm);
 
@@ -919,24 +961,26 @@ function getOrCreateDirectThread(userIds) {
 
   const transaction = db.transaction(() => {
     const result = db
-      .prepare(`INSERT INTO threads (thread_type, direct_key) VALUES ('direct', ?)`)
+      .prepare(
+        `INSERT INTO threads (thread_type, direct_key) VALUES ('direct', ?)`,
+      )
       .run(directKey);
 
     const threadId = result.lastInsertRowid;
 
     db.prepare(
-      `INSERT INTO thread_participants (thread_id, user_id) VALUES (?, ?)`
+      `INSERT INTO thread_participants (thread_id, user_id) VALUES (?, ?)`,
     ).run(threadId, firstUserId);
 
     db.prepare(
-      `INSERT INTO thread_participants (thread_id, user_id) VALUES (?, ?)`
+      `INSERT INTO thread_participants (thread_id, user_id) VALUES (?, ?)`,
     ).run(threadId, secondUserId);
 
     return threadId;
   });
 
   return serializeThread(
-    db.prepare(`SELECT * FROM threads WHERE id = ?`).get(transaction())
+    db.prepare(`SELECT * FROM threads WHERE id = ?`).get(transaction()),
   );
 }
 
@@ -963,7 +1007,7 @@ function createGroupThread(userIds, groupName = null) {
 
     for (const userId of uniqueUsers) {
       db.prepare(
-        `INSERT INTO thread_participants (thread_id, user_id) VALUES (?, ?)`
+        `INSERT INTO thread_participants (thread_id, user_id) VALUES (?, ?)`,
       ).run(threadId, userId);
     }
 
@@ -980,7 +1024,7 @@ function isBlocked(userId, otherUserId) {
       SELECT 1 FROM blocks
       WHERE (blocker_id = ? AND blocked_id = ?)
          OR (blocker_id = ? AND blocked_id = ?)
-    `
+    `,
     )
     .get(userId, otherUserId, otherUserId, userId);
 
@@ -990,7 +1034,7 @@ function isBlocked(userId, otherUserId) {
 function isBlockedByAny(userId, threadId) {
   const participants = db
     .prepare(
-      `SELECT user_id FROM thread_participants WHERE thread_id = ? AND user_id != ?`
+      `SELECT user_id FROM thread_participants WHERE thread_id = ? AND user_id != ?`,
     )
     .all(threadId, userId);
 
@@ -1006,7 +1050,7 @@ function insertMessage(
   senderId,
   content,
   mediaUrl = null,
-  mediaType = null
+  mediaType = null,
 ) {
   const trimmedContent = String(content ?? "").trim();
 
@@ -1016,7 +1060,7 @@ function insertMessage(
 
   if (isBlockedByAny(senderId, threadId)) {
     throw new Error(
-      "Message blocked: You cannot exchange messages with this user."
+      "Message blocked: You cannot exchange messages with this user.",
     );
   }
 
@@ -1025,18 +1069,20 @@ function insertMessage(
       `
       INSERT INTO messages (thread_id, sender_id, content, media_url, media_type)
       VALUES (?, ?, ?, ?, ?)
-    `
+    `,
     )
     .run(
       threadId,
       String(senderId).trim(),
       trimmedContent || null,
       mediaUrl,
-      mediaType
+      mediaType,
     );
 
   return serializeMessage(
-    db.prepare(`SELECT * FROM messages WHERE id = ?`).get(result.lastInsertRowid)
+    db
+      .prepare(`SELECT * FROM messages WHERE id = ?`)
+      .get(result.lastInsertRowid),
   );
 }
 
@@ -1048,7 +1094,7 @@ function getMessagesForThread(threadId, afterMessageId = 0) {
       FROM messages
       WHERE thread_id = ? AND id > ?
       ORDER BY id ASC
-    `
+    `,
     )
     .all(threadId, afterMessageId);
 
@@ -1079,7 +1125,7 @@ function getUserInbox(userId) {
         WHERE user_id = ?
       )
       ORDER BY datetime(COALESCE(lastMessageAt, t.updated_at)) DESC
-    `
+    `,
     )
     .all(String(userId), String(userId));
 }
@@ -1089,13 +1135,13 @@ function addParticipant(threadId, userId) {
     `
     INSERT OR IGNORE INTO thread_participants (thread_id, user_id)
     VALUES (?, ?)
-  `
+  `,
   ).run(threadId, String(userId).trim());
 }
 
 function removeParticipant(threadId, userId) {
   db.prepare(
-    `DELETE FROM thread_participants WHERE thread_id = ? AND user_id = ?`
+    `DELETE FROM thread_participants WHERE thread_id = ? AND user_id = ?`,
   ).run(threadId, String(userId).trim());
 }
 
@@ -1109,7 +1155,7 @@ function deleteMessage(messageId) {
 
 function updateThreadName(threadId, newName) {
   db.prepare(
-    "UPDATE threads SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+    "UPDATE threads SET name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
   ).run(newName, threadId);
 
   return getThreadById(threadId);
@@ -1117,14 +1163,14 @@ function updateThreadName(threadId, newName) {
 
 function blockUser(blockerId, blockedId) {
   db.prepare(
-    `INSERT OR IGNORE INTO blocks (blocker_id, blocked_id) VALUES (?, ?)`
+    `INSERT OR IGNORE INTO blocks (blocker_id, blocked_id) VALUES (?, ?)`,
   ).run(String(blockerId).trim(), String(blockedId).trim());
 }
 
 function unblockUser(blockerId, blockedId) {
   db.prepare(`DELETE FROM blocks WHERE blocker_id = ? AND blocked_id = ?`).run(
     String(blockerId).trim(),
-    String(blockedId).trim()
+    String(blockedId).trim(),
   );
 }
 
@@ -1143,7 +1189,7 @@ function interactWithPost(postId, userId, type, content = null) {
         SELECT id
         FROM interactions
         WHERE postId = ? AND userId = ? AND type = 'like'
-      `
+      `,
       )
       .get(postId, userId);
 
@@ -1158,7 +1204,7 @@ function interactWithPost(postId, userId, type, content = null) {
       `
       INSERT INTO interactions (postId, userId, type, content)
       VALUES (?, ?, ?, ?)
-    `
+    `,
     )
     .run(postId, userId, type, content);
 
@@ -1186,7 +1232,7 @@ function getPostById(postId, viewerId = 0) {
       FROM posts p
       JOIN users u ON p.authorId = u.id
       WHERE p.id = ?
-    `
+    `,
     )
     .get(viewerId, postId);
 
@@ -1200,7 +1246,7 @@ function getPostById(postId, viewerId = 0) {
       JOIN users u ON i.userId = u.id
       WHERE i.postId = ?
       ORDER BY i.createdAt DESC
-    `
+    `,
     )
     .all(postId);
 
@@ -1251,7 +1297,7 @@ function getFeedForUser(userId) {
         AND p.communityId IS NULL
       ORDER BY datetime(p.createdAt) DESC
       LIMIT 50
-    `
+    `,
     )
     .all(userId, ...followingIds);
 }
@@ -1270,7 +1316,7 @@ function getAllPosts() {
       WHERE p.communityId IS NULL
       ORDER BY datetime(p.createdAt) DESC
       LIMIT 50
-    `
+    `,
     )
     .all();
 }
@@ -1285,7 +1331,7 @@ function getRecentPosts() {
       WHERE p.communityId IS NULL
       ORDER BY datetime(p.createdAt) DESC
       LIMIT 50
-    `
+    `,
     )
     .all();
 }
@@ -1298,7 +1344,7 @@ function getAllCommunities() {
         (SELECT COUNT(*) FROM community_members WHERE communityId = c.id) as memberCount
       FROM communities c
       ORDER BY c.name
-    `
+    `,
     )
     .all();
 }
@@ -1310,7 +1356,7 @@ function getCommunityMembership(communityId, userId) {
       SELECT communityId, userId, role, createdAt
       FROM community_members
       WHERE communityId = ? AND userId = ?
-    `
+    `,
     )
     .get(communityId, userId);
 }
@@ -1343,7 +1389,7 @@ function getActiveCommunityBan(communityId, userId) {
         AND datetime(bannedUntil) > datetime('now')
       ORDER BY datetime(bannedUntil) DESC
       LIMIT 1
-    `
+    `,
     )
     .get(communityId, userId);
 }
@@ -1367,7 +1413,7 @@ function getCommunityMembers(communityId) {
         CASE WHEN cm.role = 'admin' THEN 0 ELSE 1 END,
         COALESCE(u.displayName, u.username),
         u.username
-    `
+    `,
     )
     .all(communityId);
 }
@@ -1378,7 +1424,9 @@ function promoteCommunityMemberToAdmin(communityId, targetUserId, adminUserId) {
   const membership = getCommunityMembership(communityId, targetUserId);
 
   if (!membership) {
-    const error = new Error("User must join the community before becoming an admin.");
+    const error = new Error(
+      "User must join the community before becoming an admin.",
+    );
     error.statusCode = 400;
     throw error;
   }
@@ -1388,7 +1436,7 @@ function promoteCommunityMemberToAdmin(communityId, targetUserId, adminUserId) {
     UPDATE community_members
     SET role = 'admin'
     WHERE communityId = ? AND userId = ?
-  `
+  `,
   ).run(communityId, targetUserId);
 
   return getCommunityMembership(communityId, targetUserId);
@@ -1399,25 +1447,32 @@ function banCommunityMember(
   targetUserId,
   adminUserId,
   durationMinutes = 10,
-  reason = null
+  reason = null,
 ) {
   requireCommunityAdmin(communityId, adminUserId);
 
   const targetMembership = getCommunityMembership(communityId, targetUserId);
 
   if (!targetMembership) {
-    const error = new Error("User must be a community member before they can be banned.");
+    const error = new Error(
+      "User must be a community member before they can be banned.",
+    );
     error.statusCode = 400;
     throw error;
   }
 
   if (targetMembership.role === "admin") {
-    const error = new Error("Community admins cannot temporarily ban other admins.");
+    const error = new Error(
+      "Community admins cannot temporarily ban other admins.",
+    );
     error.statusCode = 400;
     throw error;
   }
 
-  const duration = Math.min(Math.max(parseInt(durationMinutes, 10) || 10, 1), 10);
+  const duration = Math.min(
+    Math.max(parseInt(durationMinutes, 10) || 10, 1),
+    10,
+  );
   const bannedUntil = new Date(Date.now() + duration * 60 * 1000).toISOString();
 
   const result = db
@@ -1425,7 +1480,7 @@ function banCommunityMember(
       `
       INSERT INTO community_bans (communityId, userId, bannedBy, reason, bannedUntil)
       VALUES (?, ?, ?, ?, ?)
-    `
+    `,
     )
     .run(communityId, targetUserId, adminUserId, reason, bannedUntil);
 
@@ -1442,7 +1497,7 @@ function getCommunityById(id, userId = null) {
         (SELECT COUNT(*) FROM community_members WHERE communityId = c.id) as memberCount
       FROM communities c
       WHERE c.id = ?
-    `
+    `,
     )
     .get(id);
 
@@ -1465,7 +1520,7 @@ function joinCommunity(communityId, userId) {
     `
     INSERT OR IGNORE INTO community_members (communityId, userId, role)
     VALUES (?, ?, 'member')
-  `
+  `,
   ).run(communityId, userId);
 
   return getCommunityMembership(communityId, userId);
@@ -1473,7 +1528,7 @@ function joinCommunity(communityId, userId) {
 
 function leaveCommunity(communityId, userId) {
   db.prepare(
-    `DELETE FROM community_members WHERE communityId = ? AND userId = ?`
+    `DELETE FROM community_members WHERE communityId = ? AND userId = ?`,
   ).run(communityId, userId);
 }
 
@@ -1489,7 +1544,7 @@ function getCommunitiesByUserId(userId) {
       JOIN community_members cm ON c.id = cm.communityId
       WHERE cm.userId = ?
       ORDER BY c.name
-    `
+    `,
     )
     .all(userId);
 }
@@ -1501,7 +1556,7 @@ function createCommunity(name, type, category, description, creatorId) {
         `
         INSERT INTO communities (name, type, category, description, creatorId)
         VALUES (?, ?, ?, ?, ?)
-      `
+      `,
       )
       .run(name, type, category, description, creatorId);
 
@@ -1511,7 +1566,7 @@ function createCommunity(name, type, category, description, creatorId) {
       `
       INSERT INTO community_members (communityId, userId, role)
       VALUES (?, ?, 'admin')
-    `
+    `,
     ).run(id, creatorId);
 
     return id;
@@ -1527,7 +1582,7 @@ function createPost(
   imageUrl = null,
   videoUrl = null,
   communityId = null,
-  postType = "post"
+  postType = "post",
 ) {
   const normalizedCommunityId = communityId ? parseInt(communityId, 10) : null;
   const normalizedPostType =
@@ -1543,7 +1598,9 @@ function createPost(
     }
 
     if (normalizedPostType === "announcement" && membership.role !== "admin") {
-      const error = new Error("Only community admins can create announcements.");
+      const error = new Error(
+        "Only community admins can create announcements.",
+      );
       error.statusCode = 403;
       throw error;
     }
@@ -1552,7 +1609,7 @@ function createPost(
 
     if (activeBan && membership.role !== "admin") {
       const error = new Error(
-        "You are temporarily banned from posting in this community."
+        "You are temporarily banned from posting in this community.",
       );
       error.statusCode = 403;
       error.ban = activeBan;
@@ -1565,7 +1622,7 @@ function createPost(
       `
       INSERT INTO posts (authorId, content, imageUrl, videoUrl, communityId, postType)
       VALUES (?, ?, ?, ?, ?, ?)
-    `
+    `,
     )
     .run(
       authorId,
@@ -1573,7 +1630,7 @@ function createPost(
       imageUrl,
       videoUrl,
       normalizedCommunityId,
-      normalizedPostType
+      normalizedPostType,
     );
 
   return db
@@ -1583,7 +1640,7 @@ function createPost(
       FROM posts p
       JOIN users u ON p.authorId = u.id
       WHERE p.id = ?
-    `
+    `,
     )
     .get(info.lastInsertRowid);
 }
@@ -1621,7 +1678,7 @@ function getCommunityFeed(communityId, viewerId) {
         CASE WHEN p.postType = 'announcement' THEN 0 ELSE 1 END,
         datetime(p.createdAt) DESC
       LIMIT 100
-    `
+    `,
     )
     .all(viewerId, communityId);
 }

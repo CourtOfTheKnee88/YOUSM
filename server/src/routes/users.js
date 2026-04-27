@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const bcrypt = require("bcryptjs");
 
 const router = express.Router();
 
@@ -51,13 +52,7 @@ function getStatusCode(error) {
 function removeSensitiveUserFields(user) {
   if (!user) return null;
 
-  const {
-    password,
-    securityQA,
-    securityQuestion,
-    email,
-    ...safeUser
-  } = user;
+  const { password, securityQA, securityQuestion, email, ...safeUser } = user;
 
   return safeUser;
 }
@@ -92,7 +87,7 @@ router.post("/login", (req, res) => {
     const { username, password } = req.body;
     const user = getUserByUsername(username);
 
-    if (!user || user.password !== password) {
+    if (!user || !bcrypt.compareSync(password, user.password)) {
       return res.status(401).json({ error: "Invalid username or password" });
     }
 
@@ -132,7 +127,7 @@ router.post("/verify-security", (req, res) => {
       user &&
       user.securityQA &&
       answer &&
-      user.securityQA.toLowerCase() === answer.toLowerCase()
+      bcrypt.compareSync(answer.toLowerCase(), user.securityQA)
     ) {
       return res.json({ success: true });
     }
@@ -155,7 +150,8 @@ router.post("/reset-password", (req, res) => {
         .json({ error: "userId and newPassword are required." });
     }
 
-    updateUserPassword(userId, newPassword);
+    const hashedPassword = bcrypt.hashSync(newPassword, 10);
+    updateUserPassword(userId, hashedPassword);
     res.json({ success: true });
   } catch (error) {
     console.error("Password reset failed:", error);
@@ -187,13 +183,18 @@ router.post("/", (req, res) => {
       return res.status(409).json({ error: "Username already exists" });
     }
 
+    const hashedPassword = bcrypt.hashSync(password, 10);
+    const hashedAnswer = securityAnswer
+      ? bcrypt.hashSync(securityAnswer.toLowerCase(), 10)
+      : null;
+
     const user = createUser(
       username,
       email,
-      password,
+      hashedPassword,
       role || "Student",
       securityQuestion,
-      securityAnswer
+      hashedAnswer,
     );
 
     res.status(201).json({ user: removeSensitiveUserFields(user) });
@@ -237,25 +238,29 @@ router.post("/:userId/follow-requests/:requestId/respond", (req, res) => {
 });
 
 // POST upload profile image
-router.post("/:userId/profile-image", upload.single("profileImage"), (req, res) => {
-  try {
-    const userId = parseInt(req.params.userId);
+router.post(
+  "/:userId/profile-image",
+  upload.single("profileImage"),
+  (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
 
-    if (!req.file) {
-      return res.status(400).json({ error: "Profile image is required." });
+      if (!req.file) {
+        return res.status(400).json({ error: "Profile image is required." });
+      }
+
+      const profileImage = `/uploads/${req.file.filename}`;
+      const user = updateUserProfileImage(userId, profileImage);
+
+      res.json({ user: removeSensitiveUserFields(user), profileImage });
+    } catch (error) {
+      console.error("Error uploading profile image:", error);
+      res
+        .status(getStatusCode(error))
+        .json({ error: error.message || "Failed to upload profile image" });
     }
-
-    const profileImage = `/uploads/${req.file.filename}`;
-    const user = updateUserProfileImage(userId, profileImage);
-
-    res.json({ user: removeSensitiveUserFields(user), profileImage });
-  } catch (error) {
-    console.error("Error uploading profile image:", error);
-    res
-      .status(getStatusCode(error))
-      .json({ error: error.message || "Failed to upload profile image" });
-  }
-});
+  },
+);
 
 // GET profile as viewed by another user
 router.get("/:userId/profile", (req, res) => {
