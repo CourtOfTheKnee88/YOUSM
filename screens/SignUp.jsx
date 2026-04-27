@@ -25,7 +25,7 @@ const SECURITY_QUESTIONS = [
   "What street did you grow up on?",
 ];
 
-const ROLE_OPTIONS = ["Student", "Facility"];
+const ROLE_OPTIONS = ["Student", "Faculty"];
 
 export default function SignUpScreen({ navigation }) {
   const [username, setUsername] = useState("");
