@@ -208,6 +208,10 @@ export default function LoginScreen({ navigation }) {
         />
       </View>
       <View style={styles.loginContainer}>
+        <Image
+          source={require("../assets/NameLogo2.png")}
+          style={{ marginBottom: 20 }}
+        />
         <View style={styles.inputWrapper}>
           <TextInput
             style={styles.textInput}

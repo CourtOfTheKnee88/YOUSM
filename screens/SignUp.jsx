@@ -155,9 +155,6 @@ export default function SignUpScreen({ navigation }) {
         style={styles.background}
       />
       <View style={styles.logoContainer}>
-        <Text style={{ fontSize: 30, paddingRight: 10, color: "#ffffff" }}>
-          YOUSM
-        </Text>
         <Image
           source={require("../assets/logo.png")}
           style={{ width: 60, height: 60 }}
@@ -343,10 +340,10 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   logoContainer: {
-    height: "12%",
+    height: "15%",
     alignItems: "center",
     justifyContent: "center",
-    paddingTop: 20,
+    paddingTop: 60,
     flexDirection: "row",
   },
   loginContainer: {
