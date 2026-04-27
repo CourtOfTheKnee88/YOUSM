@@ -48,7 +48,10 @@ export default function HomeScreen({ navigation }) {
             place.
           </Text>
 
-          <View style={styles.searchMock}>
+          <Pressable
+            style={styles.searchMock}
+            onPress={() => navigation.navigate("Discover")}
+          >
             <MaterialCommunityIcons
               name="magnify"
               size={20}
@@ -57,7 +60,7 @@ export default function HomeScreen({ navigation }) {
             <Text style={styles.searchMockText}>
               Search people, groups, and interests
             </Text>
-          </View>
+          </Pressable>
         </View>
 
         <View style={styles.featuredCard}>

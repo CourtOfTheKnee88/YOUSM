@@ -8,6 +8,7 @@ import ProfileScreen from "./screens/ProfileScreen.js";
 import EditProfileScreen from "./screens/EditProfileScreen.js";
 import OtherUserProfileScreen from "./screens/OtherUserProfileScreen.jsx";
 import CommunitiesScreen from "./screens/CommunitiesScreen.jsx";
+import DiscoverScreen from "./screens/DiscoverScreen.jsx";
 import CommunityDetailScreen from "./screens/CommunityDetailScreen.jsx";
 import CreateCommunityScreen from "./screens/CreateCommunityScreen.jsx";
 import CommunityFeedScreen from "./screens/CommunityFeedScreen.jsx";
@@ -53,6 +54,19 @@ function HomeStack() {
         name="OtherUserProfile"
         component={OtherUserProfileScreen}
         options={{ title: "Profile" }}
+      />
+
+      <Stack.Screen
+        name="Discover"
+        component={DiscoverScreen}
+        options={{ title: "Search" }}
+        options={{ headerBackTitle: "Back" }}
+      />
+
+      <Stack.Screen
+        name="CommunityDetail"
+        component={CommunityDetailScreen}
+        options={({ route }) => ({ title: route.params?.name || "Community" })}
       />
     </Stack.Navigator>
   );
