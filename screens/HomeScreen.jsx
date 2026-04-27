@@ -1,12 +1,25 @@
 import React from "react";
-import { StyleSheet, Text, View, Pressable, ScrollView, Image, SafeAreaView } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  Pressable,
+  ScrollView,
+  Image,
+  SafeAreaView,
+} from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { StatusBar } from "expo-status-bar";
 import { COLORS, SPACING } from "../theme";
-import { currentUser } from "../data/mockData"; // Assuming this file exists from Esther's branch
+import { useAuth } from "../navigation";
 
 export default function HomeScreen({ navigation }) {
-  const firstName = currentUser?.name?.split(" ")[0] || "Student";
+  const { userData } = useAuth();
+  const currentUser = userData;
+  const firstName =
+    currentUser?.displayName?.split(" ")[0] ||
+    currentUser?.username ||
+    "Student";
   const isModerator = currentUser?.role === "Moderator";
 
   return (
@@ -23,17 +36,27 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.heroTitle}>Find your campus community</Text>
             </View>
             <View style={styles.heroLogoWrap}>
-              <Image source={require("../assets/paw2.png")} style={styles.heroLogo} />
+              <Image
+                source={require("../assets/paw2.png")}
+                style={styles.heroLogo}
+              />
             </View>
           </View>
 
           <Text style={styles.heroSubtitle}>
-            Discover clubs, explore people, and build your YOUSM profile in one place.
+            Discover clubs, explore people, and build your YOUSM profile in one
+            place.
           </Text>
 
           <View style={styles.searchMock}>
-            <MaterialCommunityIcons name="magnify" size={20} color={COLORS.textLight} />
-            <Text style={styles.searchMockText}>Search people, groups, and interests</Text>
+            <MaterialCommunityIcons
+              name="magnify"
+              size={20}
+              color={COLORS.textLight}
+            />
+            <Text style={styles.searchMockText}>
+              Search people, groups, and interests
+            </Text>
           </View>
         </View>
 
@@ -42,15 +65,19 @@ export default function HomeScreen({ navigation }) {
             <View style={styles.featuredOverlay}>
               <Text style={styles.featuredBadge}>Featured</Text>
               <Text style={styles.featuredTitle}>Women in Computing</Text>
-              <Text style={styles.featuredMeta}>Academic Club • 84 members</Text>
+              <Text style={styles.featuredMeta}>Academic Club • 2 members</Text>
             </View>
           </View>
           <View style={styles.featuredContent}>
             <Text style={styles.featuredDescription}>
-              Connect with students in tech, explore events, and find your place in the campus computing community.
+              Connect with students in tech, explore events, and find your place
+              in the campus computing community.
             </Text>
             <View style={styles.featuredButtonRow}>
-              <Pressable style={styles.primaryButton} onPress={() => navigation.navigate("Communities")}>
+              <Pressable
+                style={styles.primaryButton}
+                onPress={() => navigation.navigate("Communities")}
+              >
                 <Text style={styles.primaryButtonText}>Explore Groups</Text>
               </Pressable>
             </View>
@@ -59,25 +86,25 @@ export default function HomeScreen({ navigation }) {
 
         <Text style={styles.sectionTitle}>Quick access</Text>
         <View style={styles.quickGrid}>
-          <QuickCard 
-            title="Feed" 
-            icon="newspaper-variant-outline" 
-            onPress={() => navigation.navigate("Feed")} 
+          <QuickCard
+            title="Feed"
+            icon="newspaper-variant-outline"
+            onPress={() => navigation.navigate("Feed")}
           />
-          <QuickCard 
-            title="Post" 
-            icon="plus" 
-            onPress={() => navigation.navigate("Post")} 
+          <QuickCard
+            title="Post"
+            icon="plus"
+            onPress={() => navigation.navigate("Post")}
           />
-          <QuickCard 
-            title="Communities" 
-            icon="account-group-outline" 
-            onPress={() => navigation.navigate("Communities")} 
+          <QuickCard
+            title="Communities"
+            icon="account-group-outline"
+            onPress={() => navigation.navigate("Communities")}
           />
-          <QuickCard 
-            title="Profile" 
-            icon="account-outline" 
-            onPress={() => {}} 
+          <QuickCard
+            title="Profile"
+            icon="account-outline"
+            onPress={() => {}}
           />
         </View>
 
@@ -108,13 +135,34 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 18,
   },
-  heroTopRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 14 },
+  heroTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 14,
+  },
   heroTextWrap: { flex: 1, paddingRight: 12 },
   greeting: { color: COLORS.textAccent, fontSize: 14, marginBottom: 4 },
-  heroTitle: { color: "#FFFFFF", fontSize: 28, fontWeight: "800", lineHeight: 34 },
-  heroLogoWrap: { width: 70, height: 70, borderRadius: 35, backgroundColor: "#FFFFFF", alignItems: "center", justifyContent: "center" },
+  heroTitle: {
+    color: "#FFFFFF",
+    fontSize: 28,
+    fontWeight: "800",
+    lineHeight: 34,
+  },
+  heroLogoWrap: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   heroLogo: { width: 40, height: 40, resizeMode: "contain" },
-  heroSubtitle: { color: COLORS.textAccent, fontSize: 15, lineHeight: 22, marginBottom: 18 },
+  heroSubtitle: {
+    color: COLORS.textAccent,
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 18,
+  },
   searchMock: {
     backgroundColor: "#FFFFFF",
     borderRadius: 18,
@@ -124,7 +172,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  searchMockText: { flex: 1, color: COLORS.textLight, fontSize: 14, marginLeft: 8 },
+  searchMockText: {
+    flex: 1,
+    color: COLORS.textLight,
+    fontSize: 14,
+    marginLeft: 8,
+  },
   featuredCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: SPACING.largeRadius,
@@ -136,8 +189,17 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
   },
-  featuredImageArea: { height: 160, backgroundColor: "#123D7A", justifyContent: "flex-end", padding: 18 },
-  featuredOverlay: { backgroundColor: "rgba(4,39,82,0.6)", borderRadius: 18, padding: 14 },
+  featuredImageArea: {
+    height: 160,
+    backgroundColor: "#123D7A",
+    justifyContent: "flex-end",
+    padding: 18,
+  },
+  featuredOverlay: {
+    backgroundColor: "rgba(4,39,82,0.6)",
+    borderRadius: 18,
+    padding: 14,
+  },
   featuredBadge: {
     alignSelf: "flex-start",
     backgroundColor: COLORS.secondary,
@@ -152,11 +214,30 @@ const styles = StyleSheet.create({
   featuredTitle: { color: "#FFFFFF", fontSize: 22, fontWeight: "800" },
   featuredMeta: { color: COLORS.textAccent, fontSize: 12 },
   featuredContent: { padding: 18 },
-  featuredDescription: { color: COLORS.text, fontSize: 14, lineHeight: 20, marginBottom: 16 },
-  primaryButton: { backgroundColor: COLORS.primary, borderRadius: 18, paddingVertical: 12, alignItems: "center" },
+  featuredDescription: {
+    color: COLORS.text,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  primaryButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 18,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
   primaryButtonText: { color: "#FFFFFF", fontWeight: "800", fontSize: 14 },
-  sectionTitle: { color: COLORS.primary, fontSize: 21, fontWeight: "800", marginBottom: 14 },
-  quickGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between" },
+  sectionTitle: {
+    color: COLORS.primary,
+    fontSize: 21,
+    fontWeight: "800",
+    marginBottom: 14,
+  },
+  quickGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+  },
   quickCard: {
     width: "48%",
     backgroundColor: "#FFFFFF",
@@ -169,7 +250,15 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 3 },
   },
-  quickIconCircle: { width: 50, height: 50, borderRadius: 25, backgroundColor: COLORS.secondary, alignItems: "center", justifyContent: "center", marginBottom: 10 },
+  quickIconCircle: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: COLORS.secondary,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
   quickCardTitle: { color: COLORS.primary, fontSize: 16, fontWeight: "800" },
 });
 

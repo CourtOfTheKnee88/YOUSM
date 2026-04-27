@@ -1,25 +1,57 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import CommunityCard from "../components/CommunityCard";
-import { communities, currentUser } from "../data/mockData";
+import { useAuth } from "../navigation";
+import { SERVER_URL } from "../config";
 
 export default function CommunitiesScreen({ navigation }) {
-  const [joinedIds, setJoinedIds] = useState(currentUser.joinedCommunityIds);
+  const { userData } = useAuth();
+  const [communities, setCommunities] = useState([]);
+  const [joinedIds, setJoinedIds] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchCommunities();
+  }, [userData]);
+
+  const fetchCommunities = async () => {
+    try {
+      const response = await fetch(`${SERVER_URL}/communities`);
+      const data = await response.json();
+      if (data.communities) {
+        setCommunities(data.communities);
+        // Fetch user's joined communities if user data is available
+        if (userData?.id) {
+          const userCommunitiesResponse = await fetch(
+            `${SERVER_URL}/users/${userData.id}/communities`,
+          );
+          const userCommunitiesData = await userCommunitiesResponse.json();
+          if (userCommunitiesData.communities) {
+            setJoinedIds(userCommunitiesData.communities.map((c) => c.id));
+          }
+        }
+      }
+    } catch (error) {
+      console.log("Failed to fetch communities:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleJoin = (communityId) => {
     setJoinedIds((prev) =>
       prev.includes(communityId)
         ? prev.filter((id) => id !== communityId)
-        : [...prev, communityId]
+        : [...prev, communityId],
     );
   };
 
   const joinedCommunities = communities.filter((community) =>
-    joinedIds.includes(community.id)
+    joinedIds.includes(community.id),
   );
 
   const discoverCommunities = communities.filter(
-    (community) => !joinedIds.includes(community.id)
+    (community) => !joinedIds.includes(community.id),
   );
 
   return (

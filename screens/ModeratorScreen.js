@@ -1,9 +1,11 @@
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import InfoCard from "../components/InfoCard";
-import { currentUser } from "../data/mockData";
+import { useAuth } from "../navigation";
 
 export default function ModeratorScreen() {
-  const managedAreas = currentUser.managedAreas || [];
+  const { userData } = useAuth();
+  const currentUser = userData;
+  const managedAreas = currentUser?.managedAreas || [];
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
@@ -19,15 +21,17 @@ export default function ModeratorScreen() {
       </View>
 
       <InfoCard title="Moderator Details">
-        <Text style={styles.infoLine}>Name: {currentUser.name}</Text>
         <Text style={styles.infoLine}>
-          Level: {currentUser.moderationLevel || "Moderator"}
+          Name: {currentUser?.displayName || currentUser?.username}
         </Text>
         <Text style={styles.infoLine}>
-          Department: {currentUser.department || "Student Engagement"}
+          Level: {currentUser?.moderationLevel || "Moderator"}
         </Text>
         <Text style={styles.infoLine}>
-          Office Hours: {currentUser.officeHours || "N/A"}
+          Department: {currentUser?.department || "Student Engagement"}
+        </Text>
+        <Text style={styles.infoLine}>
+          Office Hours: {currentUser?.officeHours || "N/A"}
         </Text>
       </InfoCard>
 

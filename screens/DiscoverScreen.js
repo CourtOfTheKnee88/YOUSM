@@ -1,35 +1,62 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import SearchBar from "../components/SearchBar";
 import FilterChip from "../components/FilterChip";
-import { communities, people } from "../data/mockData";
+import { SERVER_URL } from "../config";
 
 export default function DiscoverScreen({ navigation }) {
   const [query, setQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
+  const [people, setPeople] = useState([]);
+  const [communities, setCommunities] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (query.trim().length > 0) {
+      searchContent();
+    } else {
+      setPeople([]);
+      setCommunities([]);
+    }
+  }, [query]);
+
+  const searchContent = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `${SERVER_URL}/search?query=${encodeURIComponent(query)}`,
+      );
+      const data = await response.json();
+      if (data.results) {
+        // Separate results into people and communities
+        const peopleResults = data.results
+          .filter((item) => item.resultType === "person")
+          .map((person) => ({
+            id: person.id,
+            name: person.displayName || person.username,
+            role: person.role,
+            subtitle: person.major || person.role,
+          }));
+        const communitiesResults = data.results.filter(
+          (item) => item.resultType === "community",
+        );
+        setPeople(peopleResults);
+        setCommunities(communitiesResults);
+      }
+    } catch (error) {
+      console.log("Failed to search:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredPeople = useMemo(() => {
     return people.filter((person) => {
-      const matchesQuery =
-        person.name.toLowerCase().includes(query.toLowerCase()) ||
-        person.subtitle.toLowerCase().includes(query.toLowerCase());
-
       const matchesFilter =
         activeFilter === "All" || person.role === activeFilter;
-
-      return matchesQuery && matchesFilter;
+      return matchesFilter;
     });
-  }, [query, activeFilter]);
-
-  const filteredCommunities = useMemo(() => {
-    return communities.filter((community) => {
-      return (
-        community.name.toLowerCase().includes(query.toLowerCase()) ||
-        community.description.toLowerCase().includes(query.toLowerCase()) ||
-        community.category.toLowerCase().includes(query.toLowerCase())
-      );
-    });
-  }, [query]);
+  }, [people, activeFilter]);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
@@ -98,7 +125,9 @@ export default function DiscoverScreen({ navigation }) {
           <Text style={styles.communityMeta}>
             {community.type} • {community.category}
           </Text>
-          <Text style={styles.communityDescription}>{community.description}</Text>
+          <Text style={styles.communityDescription}>
+            {community.description}
+          </Text>
         </Pressable>
       ))}
     </ScrollView>

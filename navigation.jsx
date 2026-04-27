@@ -324,9 +324,21 @@ function AppStack() {
         tabBarInactiveTintColor: "#999",
       })}
     >
-      <Tab.Screen name="Home" component={HomeStack} options={{ title: "Home" }} />
-      <Tab.Screen name="Feed" component={FeedStack} options={{ title: "Feed" }} />
-      <Tab.Screen name="Post" component={PostStack} options={{ title: "Post" }} />
+      <Tab.Screen
+        name="Home"
+        component={HomeStack}
+        options={{ title: "Home" }}
+      />
+      <Tab.Screen
+        name="Feed"
+        component={FeedStack}
+        options={{ title: "Feed" }}
+      />
+      <Tab.Screen
+        name="Post"
+        component={PostStack}
+        options={{ title: "Post" }}
+      />
       <Tab.Screen
         name="Communities"
         component={CommunityStack}
@@ -355,6 +367,7 @@ const authReducer = (state, action) => {
         userId: action.userId,
         userRole: action.userRole,
         username: action.username,
+        userData: action.userData || null,
         isLoading: false,
       };
 
@@ -366,7 +379,14 @@ const authReducer = (state, action) => {
         userId: action.userId,
         userRole: action.userRole,
         username: action.username,
+        userData: action.userData || null,
         isLoading: false,
+      };
+
+    case "SET_USER_DATA":
+      return {
+        ...state,
+        userData: action.userData,
       };
 
     case "SIGN_OUT":
@@ -377,6 +397,7 @@ const authReducer = (state, action) => {
         userId: null,
         userRole: null,
         username: null,
+        userData: null,
         isLoading: false,
       };
 
@@ -399,7 +420,28 @@ export const AuthProvider = ({ children }) => {
     userId: null,
     userRole: null,
     username: null,
+    userData: null,
   });
+
+  const fetchUserData = async (userId) => {
+    try {
+      const response = await fetch(
+        `${require("./config").SERVER_URL}/users/${userId}`,
+      );
+      const data = await response.json();
+
+      if (response.ok && data.user) {
+        dispatch({
+          type: "SET_USER_DATA",
+          userData: data.user,
+        });
+        return data.user;
+      }
+    } catch (error) {
+      console.log("Failed to fetch user data:", error);
+    }
+    return null;
+  };
 
   useEffect(() => {
     const bootstrapAsync = async () => {
@@ -409,7 +451,7 @@ export const AuthProvider = ({ children }) => {
         const userRole = await AsyncStorage.getItem("userRole");
         const username = await AsyncStorage.getItem("username");
 
-        if (token) {
+        if (token && userId) {
           dispatch({
             type: "RESTORE_TOKEN",
             token,
@@ -417,6 +459,8 @@ export const AuthProvider = ({ children }) => {
             userRole,
             username,
           });
+          // Fetch full user data from backend
+          await fetchUserData(userId);
         } else {
           dispatch({ type: "REST" });
         }
@@ -438,7 +482,7 @@ export const AuthProvider = ({ children }) => {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username, password }),
-          }
+          },
         );
 
         const data = await response.json();
@@ -460,7 +504,11 @@ export const AuthProvider = ({ children }) => {
           userId: data.user.id.toString(),
           userRole: data.user.role,
           username: data.user.username,
+          userData: data.user,
         });
+
+        // Fetch full user data from backend
+        await fetchUserData(data.user.id.toString());
 
         return true;
       } catch (error) {
@@ -475,21 +523,24 @@ export const AuthProvider = ({ children }) => {
       password,
       role,
       securityQuestion,
-      securityAnswer
+      securityAnswer,
     ) => {
       try {
-        const response = await fetch(`${require("./config").SERVER_URL}/users`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            username,
-            email,
-            password,
-            role,
-            securityQuestion,
-            securityAnswer,
-          }),
-        });
+        const response = await fetch(
+          `${require("./config").SERVER_URL}/users`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              username,
+              email,
+              password,
+              role,
+              securityQuestion,
+              securityAnswer,
+            }),
+          },
+        );
 
         const data = await response.json();
 
@@ -510,7 +561,11 @@ export const AuthProvider = ({ children }) => {
           userId: data.user.id.toString(),
           userRole: data.user.role,
           username: data.user.username,
+          userData: data.user,
         });
+
+        // Fetch full user data from backend
+        await fetchUserData(data.user.id.toString());
 
         return true;
       } catch (error) {
