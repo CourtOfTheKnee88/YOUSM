@@ -49,35 +49,43 @@ export default function SignUpScreen({ navigation }) {
       Alert.alert("Error", "Username is required");
       return false;
     }
+
     if (username.length < 3) {
       Alert.alert("Error", "Username must be at least 3 characters");
       return false;
     }
+
     if (!email.trim()) {
       Alert.alert("Error", "Email is required");
       return false;
     }
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       Alert.alert("Error", "Please enter a valid email");
       return false;
     }
+
     if (!password.trim()) {
       Alert.alert("Error", "Password is required");
       return false;
     }
+
     if (password.length < 6) {
       Alert.alert("Error", "Password must be at least 6 characters");
       return false;
     }
+
     if (password !== confirmPassword) {
       Alert.alert("Error", "Passwords do not match");
       return false;
     }
+
     if (!securityAnswer.trim()) {
       Alert.alert("Error", "Security answer is required");
       return false;
     }
+
     return true;
   };
 
@@ -93,11 +101,10 @@ export default function SignUpScreen({ navigation }) {
     }
 
     setLoading(true);
+
     try {
-      // Register user on backend first
-      // Register user on backend.
-      // The backend db.js logic handles unique constraints for username and email.
       console.log("Registering user on backend...");
+
       const backendResponse = await fetch(`${SERVER_URL}/users`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -111,32 +118,58 @@ export default function SignUpScreen({ navigation }) {
         }),
       });
 
-      if (!backendResponse.ok) {
-        const errorData = await backendResponse.json();
+      const rawText = await backendResponse.text();
+      console.log("SIGNUP RAW RESPONSE:", rawText);
+
+      let backendUser;
+
+      try {
+        backendUser = JSON.parse(rawText);
+      } catch (parseError) {
+        console.error("Backend did not return JSON:", rawText);
+
         Alert.alert(
-          "Error",
-          errorData.error || "Failed to create account on server",
+          "Server Error",
+          rawText || "The server returned an invalid response.",
         );
-        setLoading(false);
+
         return;
       }
 
-      const backendUser = await backendResponse.json();
+      if (!backendResponse.ok) {
+        Alert.alert(
+          "Error",
+          backendUser.error || "Failed to create account on server",
+        );
+
+        return;
+      }
+
+      if (!backendUser.user || !backendUser.user.id) {
+        console.error("Unexpected signup response shape:", backendUser);
+
+        Alert.alert(
+          "Server Error",
+          "Account may have been created, but the server response was missing the user ID.",
+        );
+
+        return;
+      }
+
       const backendUserId = backendUser.user.id;
       console.log("User created on backend with ID:", backendUserId);
 
-      Alert.alert("Success", "Account created successfully!");
-
-      // Save user data to AsyncStorage with backend-assigned ID
       await AsyncStorage.setItem("userToken", `token_${backendUserId}`);
       await AsyncStorage.setItem("userId", backendUserId.toString());
       await AsyncStorage.setItem("userRole", selectedRole.toLowerCase());
       await AsyncStorage.setItem("username", username);
 
-      // Call signUp from auth context to automatically log in
+      Alert.alert("Success", "Account created successfully!");
+
       await signUp(username, email);
     } catch (error) {
       console.error("Sign up error:", error);
+
       Alert.alert(
         "Error",
         error.message || "Sign up failed. Please try again.",
@@ -154,18 +187,21 @@ export default function SignUpScreen({ navigation }) {
         end={{ x: 0, y: 1 }}
         style={styles.background}
       />
+
       <View style={styles.logoContainer}>
         <Image
           source={require("../assets/logo.png")}
           style={{ width: 60, height: 60 }}
         />
       </View>
+
       <ScrollView
         style={styles.loginContainer}
         contentContainerStyle={styles.scrollContent}
       >
         <View style={styles.inputWrapper}>
           <Text style={styles.label}>Create Your Account</Text>
+
           <TextInput
             style={styles.textInput}
             placeholder="Username"
@@ -174,6 +210,7 @@ export default function SignUpScreen({ navigation }) {
             onChangeText={setUsername}
             editable={!loading}
           />
+
           <TextInput
             style={styles.textInput}
             placeholder="Email"
@@ -181,9 +218,12 @@ export default function SignUpScreen({ navigation }) {
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
+            autoCapitalize="none"
             editable={!loading}
           />
+
           <Text style={styles.securityLabel}>Select Your Role</Text>
+
           <TouchableOpacity
             style={styles.pickerContainer}
             onPress={() => setShowRoleDropdown(true)}
@@ -192,6 +232,7 @@ export default function SignUpScreen({ navigation }) {
             <Text style={styles.pickerText}>{selectedRole}</Text>
             <Text style={styles.dropdownArrow}>▼</Text>
           </TouchableOpacity>
+
           <Modal
             transparent
             visible={showRoleDropdown}
@@ -222,6 +263,7 @@ export default function SignUpScreen({ navigation }) {
               </View>
             </TouchableOpacity>
           </Modal>
+
           <View style={styles.passwordContainer}>
             <TextInput
               style={styles.passwordInput}
@@ -232,6 +274,7 @@ export default function SignUpScreen({ navigation }) {
               onChangeText={setPassword}
               editable={!loading}
             />
+
             <Pressable
               onPress={() => setShowPassword(!showPassword)}
               disabled={loading}
@@ -240,6 +283,7 @@ export default function SignUpScreen({ navigation }) {
               <Text>{showPassword ? "Hide" : "Show"}</Text>
             </Pressable>
           </View>
+
           <View style={styles.passwordContainer}>
             <TextInput
               style={styles.passwordInput}
@@ -250,6 +294,7 @@ export default function SignUpScreen({ navigation }) {
               onChangeText={setConfirmPassword}
               editable={!loading}
             />
+
             <Pressable
               onPress={() => setShowConfirmPassword(!showConfirmPassword)}
               disabled={loading}
@@ -258,7 +303,9 @@ export default function SignUpScreen({ navigation }) {
               <Text>{showConfirmPassword ? "Hide" : "Show"}</Text>
             </Pressable>
           </View>
+
           <Text style={styles.securityLabel}>Select Security Question</Text>
+
           <TouchableOpacity
             style={styles.pickerContainer}
             onPress={() => setShowDropdown(true)}
@@ -267,6 +314,7 @@ export default function SignUpScreen({ navigation }) {
             <Text style={styles.pickerText}>{securityQuestion}</Text>
             <Text style={styles.dropdownArrow}>▼</Text>
           </TouchableOpacity>
+
           <Modal
             transparent
             visible={showDropdown}
@@ -297,6 +345,7 @@ export default function SignUpScreen({ navigation }) {
               </View>
             </TouchableOpacity>
           </Modal>
+
           <TextInput
             style={styles.textInput}
             placeholder="Your answer"
@@ -305,6 +354,7 @@ export default function SignUpScreen({ navigation }) {
             onChangeText={setSecurityAnswer}
             editable={!loading}
           />
+
           <Pressable
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleSignUp}
@@ -314,6 +364,7 @@ export default function SignUpScreen({ navigation }) {
               {loading ? "Creating Account..." : "Sign Up"}
             </Text>
           </Pressable>
+
           <Pressable
             style={styles.backButton}
             onPress={handleBack}
