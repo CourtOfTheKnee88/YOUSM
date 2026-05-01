@@ -14,6 +14,7 @@ import {
   TextInput,
   Share
 } from 'react-native';
+import { useVideoPlayer, VideoView } from 'expo-video';
 import { Ionicons } from '@expo/vector-icons';
 import { SERVER_URL } from '../config';
 import { COLORS, SPACING } from '../theme';
@@ -252,12 +253,9 @@ export default function FeedScreen({ navigation }) {
           />
         )}
 
-        {/* Post Video Placeholder */}
+        {/* Post Video */}
         {item.videoUrl && (
-          <View style={styles.videoPlaceholder}>
-            <Ionicons name="play-circle" size={60} color={COLORS.primary} />
-            <Text style={styles.videoText}>Video Post</Text>
-          </View>
+          <VideoPost source={`${SERVER_URL}${item.videoUrl}`} />
         )}
 
         {/* Post Stats */}
@@ -380,6 +378,22 @@ export default function FeedScreen({ navigation }) {
   );
 }
 
+// Helper Component for Feed Videos
+function VideoPost({ source }) {
+  const player = useVideoPlayer(source, (player) => {
+    player.loop = false;
+  });
+
+  return (
+    <VideoView
+      player={player}
+      style={styles.postVideo}
+      allowsFullscreen
+      allowsPictureInPicture
+    />
+  );
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -442,6 +456,11 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 300,
     resizeMode: 'cover'
+  },
+  postVideo: {
+    width: '100%',
+    height: 300,
+    backgroundColor: '#000'
   },
   videoPlaceholder: {
     height: 300,
